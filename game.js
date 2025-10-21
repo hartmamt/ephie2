@@ -1,4 +1,4 @@
-// Arena Shooter Game - v4.1.1
+// Arena Shooter Game - v4.1.2
 // MAJOR UPDATE: Risk of Rain Content + Boss Upgrades
 
 class Game {
@@ -872,6 +872,7 @@ class Game {
         // Enemies vs walls
         this.enemies.forEach(enemy => {
             if (!enemy || !enemy.alive) return;
+            if (enemy.ignoreWalls) return; // Kraken can pass through walls
             this.walls.forEach(wall => {
                 if (wall.checkCollision(enemy.x, enemy.y, enemy.size)) {
                     // Push enemy out of wall
@@ -1212,7 +1213,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('v4.1.1', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('v4.1.2', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -3249,10 +3250,8 @@ class RobotBoss {
             this.game.orbs.push(new Orb(x, y, 'xp', 5));
         }
 
-        // Instant level up
-        this.game.players.forEach(player => {
-            if (player) player.levelUp();
-        });
+        // Instant level up!
+        this.game.levelUp();
     }
 
     render(ctx, game) {
@@ -3386,8 +3385,9 @@ class KrakenBoss {
         this.type = 'kraken';
         this.isBoss = true;
         this.alive = true;
-        this.size = 75; // 600% larger than player (player is ~12)
+        this.size = 300; // MASSIVE! Quadrupled from 75
         this.color = '#1a5f7a';
+        this.ignoreWalls = true; // Can go through walls
 
         const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
         this.maxHealth = 1500 * scale; // Lots of health
@@ -3478,10 +3478,8 @@ class KrakenBoss {
             this.game.orbs.push(new Orb(x, y, 'xp', 5));
         }
 
-        // Instant level up
-        this.game.players.forEach(player => {
-            if (player) player.levelUp();
-        });
+        // Instant level up!
+        this.game.levelUp();
     }
 
     render(ctx, game) {
@@ -3731,10 +3729,8 @@ class DragonBoss {
             this.game.orbs.push(new Orb(x, y, 'xp', 5));
         }
 
-        // Instant level up
-        this.game.players.forEach(player => {
-            if (player) player.levelUp();
-        });
+        // Instant level up!
+        this.game.levelUp();
     }
 
     render(ctx, game) {
@@ -3855,7 +3851,7 @@ class DragonFlame {
     }
 }
 
-// RISK OF RAIN ABILITIES - v4.1.1
+// RISK OF RAIN ABILITIES - v4.1.2
 
 class CommandoAbility {
     constructor(player, game) {
