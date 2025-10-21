@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v2.1.4
-// Hotfix: Fixed weapon switching bug
+// Arena Shooter Game - Armory v2.1.5
+// New Features: Sound toggle + Custom background image upload
 
 class Game {
     constructor() {
@@ -49,9 +49,14 @@ class Game {
         this.roomCode = null;
         this.connection = null;
 
+        // Custom background
+        this.backgroundImage = null;
+        this.backgroundPattern = null;
+
         // Input
         this.keys = {};
         this.setupInput();
+        this.setupSettings();
 
         // Available upgrades pool
         this.upgradePool = [
@@ -95,6 +100,39 @@ class Game {
         document.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
         });
+    }
+
+    setupSettings() {
+        // Sound toggle
+        const soundToggle = document.getElementById('sound-toggle');
+        soundToggle.addEventListener('change', (e) => {
+            this.soundSystem.setEnabled(e.target.checked);
+        });
+
+        // Background image upload
+        const bgUpload = document.getElementById('bg-upload');
+        bgUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.backgroundImage = img;
+                        // Create a tiled pattern from the image
+                        this.backgroundPattern = this.ctx.createPattern(img, 'repeat');
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    clearCustomBackground() {
+        this.backgroundImage = null;
+        this.backgroundPattern = null;
+        document.getElementById('bg-upload').value = '';
     }
 
     showMenu() {
@@ -677,9 +715,24 @@ class Game {
     }
 
     render() {
-        // Clear canvas with light gray background
-        this.ctx.fillStyle = '#d0d0d0';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Clear canvas with background
+        if (this.backgroundPattern) {
+            // Use custom tiled pattern
+            this.ctx.save();
+            this.ctx.translate(-this.cameraX, -this.cameraY);
+            this.ctx.fillStyle = this.backgroundPattern;
+            this.ctx.fillRect(
+                this.cameraX,
+                this.cameraY,
+                this.canvas.width,
+                this.canvas.height
+            );
+            this.ctx.restore();
+        } else {
+            // Default light gray
+            this.ctx.fillStyle = '#d0d0d0';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
 
         if (this.state === 'menu') return;
 
@@ -714,25 +767,35 @@ class Game {
     }
 
     drawGrid() {
-        this.ctx.strokeStyle = '#aaaaaa';
-        this.ctx.lineWidth = 1;
-
         const gridSize = 50;
         const offsetX = this.cameraX % gridSize;
         const offsetY = this.cameraY % gridSize;
 
-        for (let x = -offsetX; x < this.canvas.width; x += gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.canvas.height);
-            this.ctx.stroke();
-        }
+        if (this.backgroundImage) {
+            // Draw tiled images in each grid cell
+            for (let x = -offsetX; x < this.canvas.width + gridSize; x += gridSize) {
+                for (let y = -offsetY; y < this.canvas.height + gridSize; y += gridSize) {
+                    this.ctx.drawImage(this.backgroundImage, x, y, gridSize, gridSize);
+                }
+            }
+        } else {
+            // Draw default grid lines
+            this.ctx.strokeStyle = '#aaaaaa';
+            this.ctx.lineWidth = 1;
 
-        for (let y = -offsetY; y < this.canvas.height; y += gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-            this.ctx.stroke();
+            for (let x = -offsetX; x < this.canvas.width; x += gridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, 0);
+                this.ctx.lineTo(x, this.canvas.height);
+                this.ctx.stroke();
+            }
+
+            for (let y = -offsetY; y < this.canvas.height; y += gridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.canvas.width, y);
+                this.ctx.stroke();
+            }
         }
     }
 
@@ -799,7 +862,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v2.1.4', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v2.1.5', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 

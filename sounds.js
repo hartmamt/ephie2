@@ -3,10 +3,17 @@ class SoundSystem {
     constructor() {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.masterVolume = 0.3; // 30% volume
+        this.enabled = true; // Can be toggled on/off
+    }
+
+    setEnabled(enabled) {
+        this.enabled = enabled;
     }
 
     // Weapon firing sounds
     playShoot(weaponType) {
+        if (!this.enabled) return;
+
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
 
@@ -40,6 +47,8 @@ class SoundSystem {
 
     // XP orb pickup sound - satisfying hum
     playOrbPickup(type) {
+        if (!this.enabled) return;
+
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
 
@@ -67,6 +76,8 @@ class SoundSystem {
 
     // Enemy death sound - short quiet "ahhh"
     playEnemyDeath() {
+        if (!this.enabled) return;
+
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
 
@@ -88,6 +99,8 @@ class SoundSystem {
 
     // Weapon switch sound
     playWeaponSwitch() {
+        if (!this.enabled) return;
+
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
 
@@ -107,6 +120,8 @@ class SoundSystem {
 
     // Level up sound
     playLevelUp() {
+        if (!this.enabled) return;
+
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
 
@@ -127,6 +142,8 @@ class SoundSystem {
 
     // Damage taken sound
     playHit() {
+        if (!this.enabled) return;
+
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
 

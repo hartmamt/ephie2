@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arena Shooter - Armory v2.1.4</title>
+    <title>Arena Shooter - Armory v2.1.5</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -40,7 +40,23 @@
         <div id="multiplayer-setup" class="modal hidden">
             <div class="modal-content">
                 <h2>Arena Shooter</h2>
-                <p class="version-number">Armory v2.1.4</p>
+                <p class="version-number">Armory v2.1.5</p>
+
+                <!-- Settings Section -->
+                <div class="settings-section">
+                    <div class="setting-item">
+                        <label for="sound-toggle">
+                            <input type="checkbox" id="sound-toggle" checked>
+                            Enable Sound Effects
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="bg-upload">Custom Background Image:</label>
+                        <input type="file" id="bg-upload" accept="image/*">
+                        <button onclick="game.clearCustomBackground()" class="small-btn">Clear Background</button>
+                    </div>
+                </div>
+
                 <button onclick="game.startSinglePlayer()">Single Player</button>
                 <button onclick="game.startLocalMultiplayer()">Local Multiplayer</button>
                 <div class="network-options">
