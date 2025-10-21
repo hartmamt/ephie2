@@ -32,7 +32,7 @@ class Game {
         this.xpToLevel = 100;
         this.level = 1;
         this.xpGainMultiplier = 1.0;
-        this.pickupRange = 50;
+        this.pickupRange = 80; // Increased from 50 for better feel
 
         // Spawning
         this.spawnTimer = 0;
@@ -309,9 +309,25 @@ class Game {
                 const dy = target.y - orb.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist < this.pickupRange * 2) {
-                    orb.x += (dx / dist) * 100 * (deltaTime / 1000);
-                    orb.y += (dy / dist) * 100 * (deltaTime / 1000);
+                const attractionRange = this.pickupRange * 4; // Larger attraction zone
+
+                if (dist < attractionRange) {
+                    // Once attracted, orb locks onto player
+                    if (!orb.attracted) {
+                        orb.attracted = true;
+                        orb.speed = 0;
+                    }
+
+                    // Accelerate toward player (gets faster as it gets closer)
+                    const acceleration = 800; // Fast acceleration
+                    orb.speed += acceleration * (deltaTime / 1000);
+                    orb.speed = Math.min(orb.speed, 1200); // Max speed cap
+
+                    // Fly directly to player
+                    if (dist > 0) {
+                        orb.x += (dx / dist) * orb.speed * (deltaTime / 1000);
+                        orb.y += (dy / dist) * orb.speed * (deltaTime / 1000);
+                    }
                 }
             }
         });
@@ -1230,20 +1246,33 @@ class Orb {
         this.value = value;
         this.radius = type === 'heal' ? 6 : 4;
         this.color = type === 'heal' ? '#00ff00' : '#ffaa00';
+
+        // Movement properties
+        this.attracted = false;
+        this.speed = 0;
     }
 
     render(ctx, game) {
         const screenX = game.toScreenX(this.x);
         const screenY = game.toScreenY(this.y);
 
+        // Draw trail if attracted
+        if (this.attracted) {
+            ctx.fillStyle = this.color + '40';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, this.radius * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Glow effect
-        ctx.strokeStyle = this.color + '88';
-        ctx.lineWidth = 2;
+        // Glow effect (stronger when attracted)
+        const glowAlpha = this.attracted ? 'FF' : '88';
+        ctx.strokeStyle = this.color + glowAlpha;
+        ctx.lineWidth = this.attracted ? 3 : 2;
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.radius + 2, 0, Math.PI * 2);
         ctx.stroke();
