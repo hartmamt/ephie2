@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v2.1.6
-// New Feature: Player color customization
+// Arena Shooter Game - Armory v3.0.6
+// BOSS UPDATE: 3 unique boss types with special attacks
 
 class Game {
     constructor() {
@@ -43,6 +43,8 @@ class Game {
         this.spawnInterval = 1000; // Spawn every 1 second (was 2)
         this.bossSpawnTimer = 0;
         this.bossSpawnInterval = 60000; // Boss every 60 seconds
+        this.currentBossType = 0; // Rotates through boss types
+        this.bossTypes = ['Hydra', 'Golem', 'Necromancer'];
 
         // Multiplayer
         this.multiplayerMode = null; // 'local', 'host', 'client'
@@ -540,7 +542,23 @@ class Game {
         // Spawn boss above camera view
         const x = this.cameraX + this.canvas.width / 2;
         const y = this.cameraY - 100;
-        this.enemies.push(new Enemy(x, y, 'boss', this));
+
+        const bossType = this.bossTypes[this.currentBossType];
+
+        switch(bossType) {
+            case 'Hydra':
+                this.enemies.push(new HydraBoss(x, y, this));
+                break;
+            case 'Golem':
+                this.enemies.push(new GolemBoss(x, y, this));
+                break;
+            case 'Necromancer':
+                this.enemies.push(new NecromancerBoss(x, y, this));
+                break;
+        }
+
+        // Rotate to next boss type
+        this.currentBossType = (this.currentBossType + 1) % this.bossTypes.length;
     }
 
     checkCollisions() {
@@ -594,6 +612,20 @@ class Game {
                 this.enemies.forEach(enemy => {
                     if (this.circleCollision(entity.x, entity.y, entity.radius, enemy.x, enemy.y, enemy.size)) {
                         enemy.takeDamage(entity.damage);
+                    }
+                });
+            }
+        });
+
+        // Player projectiles vs purple minions
+        this.projectiles.forEach(proj => {
+            if (proj.friendly) {
+                this.entities.forEach(entity => {
+                    if (entity.type === 'purpleMinion' && entity.alive) {
+                        if (this.circleCollision(proj.x, proj.y, proj.radius, entity.x, entity.y, entity.size)) {
+                            entity.takeDamage(proj.damage);
+                            if (!proj.piercing) proj.alive = false;
+                        }
                     }
                 });
             }
@@ -842,6 +874,20 @@ class Game {
         // Survival Time
         this.ctx.fillText(`Time: ${this.formatTime(this.survivalTime)}`, padding, padding + 45);
 
+        // Boss Timer - centered at top
+        const timeUntilBoss = Math.max(0, this.bossSpawnInterval - this.bossSpawnTimer);
+        const bossSeconds = Math.ceil(timeUntilBoss / 1000);
+        const nextBoss = this.bossTypes[this.currentBossType];
+
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillStyle = '#ff0000';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`BOSS IN ${bossSeconds}s`, this.canvas.width / 2, padding + 25);
+        this.ctx.font = '16px Arial';
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillText(`Next: ${nextBoss}`, this.canvas.width / 2, padding + 48);
+        this.ctx.textAlign = 'left';
+
         // XP Bar
         const xpPercent = this.xp / this.xpToLevel;
         this.ctx.fillStyle = '#888';
@@ -891,7 +937,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v2.1.6', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v3.0.6', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -2246,6 +2292,588 @@ class Explosion {
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// BOSS CLASSES - v3.0.6
+
+class HydraBoss {
+    constructor(x, y, game) {
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.type = 'hydra';
+        this.isBoss = true;
+        this.alive = true;
+        this.size = 25;
+        this.color = '#00dd00';
+
+        const scale = 1 + (game.worldLevel - 1) * 0.08;
+        this.maxHealth = 400 * scale;
+        this.health = this.maxHealth;
+        this.speed = 50;
+        this.damage = 6 * scale;
+        this.contactDamage = 8 * scale;
+        this.xpValue = 250;
+
+        this.fireRate = 0.5; // Slow fire rate
+        this.fireTimer = 0;
+        this.range = 500;
+
+        this.poisonStacks = 0;
+        this.poisonTimer = 0;
+    }
+
+    update(deltaTime, target) {
+        if (!target) return;
+
+        const dt = deltaTime / 1000;
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Move toward target
+        this.x += (dx / dist) * this.speed * dt;
+        this.y += (dy / dist) * this.speed * dt;
+
+        // Fire 8-way spread
+        if (dist < this.range) {
+            this.fireTimer += deltaTime;
+            const fireInterval = 1000 / this.fireRate;
+
+            if (this.fireTimer >= fireInterval) {
+                const angleToTarget = Math.atan2(dy, dx);
+
+                // Shoot 8 projectiles in a spread
+                for (let i = 0; i < 8; i++) {
+                    const angle = angleToTarget + (Math.PI * 2 / 8) * i;
+                    this.game.projectiles.push(
+                        new Projectile(this.x, this.y, angle, this.damage, false, this.game)
+                    );
+                }
+                this.game.soundSystem.playShoot('heavy');
+                this.fireTimer = 0;
+            }
+        }
+
+        // Poison damage
+        if (this.poisonStacks > 0) {
+            this.poisonTimer += deltaTime;
+            if (this.poisonTimer >= 1000) {
+                this.health -= this.poisonStacks;
+                this.poisonTimer = 0;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    takeDamage(amount, projectile) {
+        this.health -= amount;
+
+        if (projectile && projectile.poison) {
+            this.poisonStacks = Math.min(10, this.poisonStacks + 1);
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
+
+        // Drop orbs
+        const xpOrbs = Math.floor(this.xpValue / 5);
+        for (let i = 0; i < xpOrbs; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 40;
+            const x = this.x + Math.cos(angle) * dist;
+            const y = this.y + Math.sin(angle) * dist;
+            this.game.orbs.push(new Orb(x, y, 'xp', 5));
+        }
+
+        // Instant level up!
+        this.game.levelUp();
+
+        const index = this.game.enemies.indexOf(this);
+        if (index > -1) {
+            this.game.enemies.splice(index, 1);
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Draw Hydra (green boss)
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw multiple heads (8 smaller circles around)
+        for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 / 8) * i;
+            const headX = screenX + Math.cos(angle) * (this.size * 0.7);
+            const headY = screenY + Math.sin(angle) * (this.size * 0.7);
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(headX, headY, this.size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Health bar
+        const barWidth = this.size * 3;
+        const barHeight = 6;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - this.size - 15;
+
+        ctx.fillStyle = '#666';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+        // Boss name
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('HYDRA', screenX, barY - 5);
+        ctx.textAlign = 'left';
+    }
+}
+
+class GolemBoss {
+    constructor(x, y, game) {
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.type = 'golem';
+        this.isBoss = true;
+        this.alive = true;
+        this.size = 35;
+        this.color = '#8b4513';
+
+        const scale = 1 + (game.worldLevel - 1) * 0.08;
+        this.maxHealth = 600 * scale;
+        this.health = this.maxHealth;
+        this.speed = 30;
+        this.damage = 12 * scale;
+        this.contactDamage = 15 * scale;
+        this.xpValue = 300;
+
+        this.fireRate = 0.3; // Very slow
+        this.fireTimer = 0;
+        this.range = 600;
+
+        this.poisonStacks = 0;
+        this.poisonTimer = 0;
+    }
+
+    update(deltaTime, target) {
+        if (!target) return;
+
+        const dt = deltaTime / 1000;
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Move toward target slowly
+        this.x += (dx / dist) * this.speed * dt;
+        this.y += (dy / dist) * this.speed * dt;
+
+        // Fire massive balls
+        if (dist < this.range) {
+            this.fireTimer += deltaTime;
+            const fireInterval = 1000 / this.fireRate;
+
+            if (this.fireTimer >= fireInterval) {
+                const angle = Math.atan2(dy, dx);
+                this.game.entities.push(new MassiveBall(this.x, this.y, angle, this.damage, this.game));
+                this.game.soundSystem.playShoot('heavy');
+                this.fireTimer = 0;
+            }
+        }
+
+        // Poison damage
+        if (this.poisonStacks > 0) {
+            this.poisonTimer += deltaTime;
+            if (this.poisonTimer >= 1000) {
+                this.health -= this.poisonStacks;
+                this.poisonTimer = 0;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    takeDamage(amount, projectile) {
+        this.health -= amount;
+
+        if (projectile && projectile.poison) {
+            this.poisonStacks = Math.min(10, this.poisonStacks + 1);
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
+
+        const xpOrbs = Math.floor(this.xpValue / 5);
+        for (let i = 0; i < xpOrbs; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 50;
+            const x = this.x + Math.cos(angle) * dist;
+            const y = this.y + Math.sin(angle) * dist;
+            this.game.orbs.push(new Orb(x, y, 'xp', 5));
+        }
+
+        // Instant level up!
+        this.game.levelUp();
+
+        const index = this.game.enemies.indexOf(this);
+        if (index > -1) {
+            this.game.enemies.splice(index, 1);
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Draw Golem (brown/tan, rectangular)
+        ctx.fillStyle = this.color;
+        ctx.fillRect(screenX - this.size, screenY - this.size, this.size * 2, this.size * 2);
+
+        // Draw rocky details
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(screenX - this.size * 0.6, screenY - this.size * 0.6, this.size * 0.4, this.size * 0.4);
+        ctx.fillRect(screenX + this.size * 0.2, screenY + this.size * 0.2, this.size * 0.5, this.size * 0.5);
+
+        // Health bar
+        const barWidth = this.size * 3;
+        const barHeight = 6;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - this.size - 15;
+
+        ctx.fillStyle = '#666';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+        // Boss name
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('GOLEM', screenX, barY - 5);
+        ctx.textAlign = 'left';
+    }
+}
+
+class NecromancerBoss {
+    constructor(x, y, game) {
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.type = 'necromancer';
+        this.isBoss = true;
+        this.alive = true;
+        this.size = 18;
+        this.color = '#9933ff';
+
+        const scale = 1 + (game.worldLevel - 1) * 0.08;
+        this.maxHealth = 200 * scale; // Weak health
+        this.health = this.maxHealth;
+        this.speed = 70; // Medium speed
+        this.damage = 4 * scale; // Weak damage
+        this.contactDamage = 5 * scale;
+        this.xpValue = 200;
+
+        this.summonRate = 1.5;
+        this.summonTimer = 0;
+        this.range = 400;
+
+        this.poisonStacks = 0;
+        this.poisonTimer = 0;
+    }
+
+    update(deltaTime, target) {
+        if (!target) return;
+
+        const dt = deltaTime / 1000;
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Keep distance from player (ranged behavior)
+        if (dist > this.range * 0.8) {
+            this.x += (dx / dist) * this.speed * dt;
+            this.y += (dy / dist) * this.speed * dt;
+        } else if (dist < this.range * 0.5) {
+            this.x -= (dx / dist) * this.speed * dt;
+            this.y -= (dy / dist) * this.speed * dt;
+        }
+
+        // Summon purple minions
+        this.summonTimer += deltaTime;
+        const summonInterval = 1000 / this.summonRate;
+
+        if (this.summonTimer >= summonInterval) {
+            // Summon 2 purple minions
+            for (let i = 0; i < 2; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spawnDist = 40;
+                const spawnX = this.x + Math.cos(angle) * spawnDist;
+                const spawnY = this.y + Math.sin(angle) * spawnDist;
+                this.game.entities.push(new PurpleMinion(spawnX, spawnY, this.game));
+            }
+            this.game.soundSystem.playShoot('medium');
+            this.summonTimer = 0;
+        }
+
+        // Poison damage
+        if (this.poisonStacks > 0) {
+            this.poisonTimer += deltaTime;
+            if (this.poisonTimer >= 1000) {
+                this.health -= this.poisonStacks;
+                this.poisonTimer = 0;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    takeDamage(amount, projectile) {
+        this.health -= amount;
+
+        if (projectile && projectile.poison) {
+            this.poisonStacks = Math.min(10, this.poisonStacks + 1);
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
+
+        const xpOrbs = Math.floor(this.xpValue / 5);
+        for (let i = 0; i < xpOrbs; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 30;
+            const x = this.x + Math.cos(angle) * dist;
+            const y = this.y + Math.sin(angle) * dist;
+            this.game.orbs.push(new Orb(x, y, 'xp', 5));
+        }
+
+        // Instant level up!
+        this.game.levelUp();
+
+        const index = this.game.enemies.indexOf(this);
+        if (index > -1) {
+            this.game.enemies.splice(index, 1);
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Draw Necromancer (purple with aura)
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Purple aura
+        ctx.strokeStyle = '#cc66ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size + 5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Health bar
+        const barWidth = this.size * 3;
+        const barHeight = 6;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - this.size - 15;
+
+        ctx.fillStyle = '#666';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+        // Boss name
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('NECROMANCER', screenX, barY - 5);
+        ctx.textAlign = 'left';
+    }
+}
+
+// Golem's Massive Ball projectile
+class MassiveBall {
+    constructor(x, y, angle, damage, game) {
+        this.type = 'massiveBall';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.damage = damage;
+        this.game = game;
+        this.alive = true;
+        this.radius = 25; // Huge!
+        this.speed = 150; // Slow
+        this.lifetime = 5000;
+        this.timer = 0;
+    }
+
+    update(deltaTime) {
+        const dt = deltaTime / 1000;
+        this.x += Math.cos(this.angle) * this.speed * dt;
+        this.y += Math.sin(this.angle) * this.speed * dt;
+
+        this.timer += deltaTime;
+        if (this.timer >= this.lifetime) {
+            this.alive = false;
+        }
+
+        // Check collision with players
+        this.game.players.forEach(player => {
+            if (!player || player.health <= 0) return;
+
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < this.radius + player.size) {
+                player.takeDamage(this.damage);
+                this.alive = false;
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Draw massive brown ball
+        ctx.fillStyle = '#654321';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Darker outline
+        ctx.strokeStyle = '#3d2713';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// Necromancer's Purple Minion
+class PurpleMinion {
+    constructor(x, y, game) {
+        this.type = 'purpleMinion';
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.alive = true;
+        this.size = 8;
+        this.color = '#9933ff';
+        this.maxHealth = 15;
+        this.health = this.maxHealth;
+        this.speed = 70;
+        this.damage = 3;
+        this.contactDamage = 2;
+    }
+
+    update(deltaTime) {
+        const dt = deltaTime / 1000;
+
+        // Find nearest player
+        let target = null;
+        let nearestDist = Infinity;
+        this.game.players.forEach(player => {
+            if (!player || player.health <= 0) return;
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                target = player;
+            }
+        });
+
+        if (target) {
+            const dx = target.x - this.x;
+            const dy = target.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            this.x += (dx / dist) * this.speed * dt;
+            this.y += (dy / dist) * this.speed * dt;
+
+            // Contact damage
+            if (dist < this.size + target.size) {
+                target.takeDamage(this.contactDamage);
+                this.alive = false;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.alive = false;
+        }
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        if (this.health <= 0) {
+            this.alive = false;
+            this.game.soundSystem.playEnemyDeath();
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Purple ball
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
         ctx.fill();
     }
 }
