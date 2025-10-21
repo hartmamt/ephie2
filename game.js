@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v3.0.8
-// Hotfix: Enemy contact freeze bug
+// Arena Shooter Game - v4.0.8
+// MAJOR UPDATE: Risk of Rain Content + Boss Upgrades
 
 class Game {
     constructor() {
@@ -57,6 +57,7 @@ class Game {
 
         // Player customization
         this.playerColor = '#00ffff'; // Default cyan
+        this.riskOfRainContent = false; // Risk of Rain abilities toggle
 
         // Highscores - load from localStorage
         this.loadHighscores();
@@ -115,6 +116,12 @@ class Game {
         const soundToggle = document.getElementById('sound-toggle');
         soundToggle.addEventListener('change', (e) => {
             this.soundSystem.setEnabled(e.target.checked);
+        });
+
+        // Risk of Rain content toggle
+        const rorToggle = document.getElementById('ror-toggle');
+        rorToggle.addEventListener('change', (e) => {
+            this.riskOfRainContent = e.target.checked;
         });
 
         // Player color picker
@@ -319,6 +326,32 @@ class Game {
                 effect: () => new LaserBladeAbility(player, this)
             }
         ];
+
+        // Add Risk of Rain abilities if enabled
+        if (this.riskOfRainContent) {
+            abilities.push(
+                {
+                    name: 'Commando',
+                    description: 'Roll a short distance and fire high powered shots for 2 seconds. Press SPACE/SHIFT.',
+                    effect: () => new CommandoAbility(player, this)
+                },
+                {
+                    name: 'Mercenary',
+                    description: 'Slash a sword 3 times, going medium distance with high damage. Press SPACE/SHIFT.',
+                    effect: () => new MercenaryAbility(player, this)
+                },
+                {
+                    name: 'Operator',
+                    description: '3 drones follow you. Each fires at 13% power. One drone heals you. Passive ability.',
+                    effect: () => new OperatorAbility(player, this)
+                },
+                {
+                    name: 'Void Fiend',
+                    description: 'Fire a large purple energy beam dealing massive damage. Press SPACE/SHIFT.',
+                    effect: () => new VoidFiendAbility(player, this)
+                }
+            );
+        }
 
         abilities.forEach(ability => {
             const card = document.createElement('div');
@@ -1008,7 +1041,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v3.0.8', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('v4.0.8', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -2384,14 +2417,14 @@ class HydraBoss {
         this.color = '#00dd00';
 
         const scale = 1 + (game.worldLevel - 1) * 0.08;
-        this.maxHealth = 400 * scale;
+        this.maxHealth = 600 * scale; // Buffed from 400
         this.health = this.maxHealth;
         this.speed = 50;
         this.damage = 6 * scale;
         this.contactDamage = 8 * scale;
         this.xpValue = 250;
 
-        this.fireRate = 0.5; // Slow fire rate
+        this.fireRate = 0.8; // Buffed from 0.5 - shoots more often
         this.fireTimer = 0;
         this.range = 500;
 
@@ -2539,14 +2572,14 @@ class GolemBoss {
         this.color = '#8b4513';
 
         const scale = 1 + (game.worldLevel - 1) * 0.08;
-        this.maxHealth = 600 * scale;
+        this.maxHealth = 900 * scale; // Buffed from 600
         this.health = this.maxHealth;
         this.speed = 30;
         this.damage = 12 * scale;
         this.contactDamage = 15 * scale;
         this.xpValue = 300;
 
-        this.fireRate = 0.3; // Very slow
+        this.fireRate = 0.5; // Buffed from 0.3 - shoots more often
         this.fireTimer = 0;
         this.range = 600;
 
@@ -2678,14 +2711,14 @@ class NecromancerBoss {
         this.color = '#9933ff';
 
         const scale = 1 + (game.worldLevel - 1) * 0.08;
-        this.maxHealth = 200 * scale; // Weak health
+        this.maxHealth = 300 * scale; // Buffed from 200
         this.health = this.maxHealth;
         this.speed = 70; // Medium speed
         this.damage = 4 * scale; // Weak damage
         this.contactDamage = 5 * scale;
         this.xpValue = 200;
 
-        this.summonRate = 1.5;
+        this.summonRate = 2.0; // Buffed from 1.5 - summons more often
         this.summonTimer = 0;
         this.range = 400;
 
@@ -2949,6 +2982,445 @@ class PurpleMinion {
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
         ctx.fill();
+    }
+}
+
+// RISK OF RAIN ABILITIES - v4.0.8
+
+class CommandoAbility {
+    constructor(player, game) {
+        this.name = 'Commando';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 6000;
+        this.timer = 0;
+        this.empoweredDuration = 2000;
+        this.empoweredTimer = 0;
+        this.rollDistance = 150;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Roll in current direction
+            const keys = this.game.keys;
+            let dx = 0, dy = 0;
+
+            if (this.player.index === 0) {
+                if (keys['w']) dy -= 1;
+                if (keys['s']) dy += 1;
+                if (keys['a']) dx -= 1;
+                if (keys['d']) dx += 1;
+            } else {
+                if (keys['arrowup']) dy -= 1;
+                if (keys['arrowdown']) dy += 1;
+                if (keys['arrowleft']) dx -= 1;
+                if (keys['arrowright']) dx += 1;
+            }
+
+            if (dx === 0 && dy === 0) dy = -1; // Default forward if no input
+
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            this.player.x += (dx / dist) * this.rollDistance;
+            this.player.y += (dy / dist) * this.rollDistance;
+
+            // Enable empowered shots
+            this.empoweredTimer = this.empoweredDuration;
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+        if (this.empoweredTimer > 0) {
+            this.empoweredTimer -= deltaTime;
+            // Boost damage while empowered
+            if (!this.originalDamage) {
+                this.originalDamage = this.player.currentWeapon.damage;
+            }
+            this.player.currentWeapon.damage = this.originalDamage * 2;
+        } else if (this.originalDamage) {
+            this.player.currentWeapon.damage = this.originalDamage;
+            this.originalDamage = null;
+        }
+    }
+
+    renderIndicator(ctx, x, y) {
+        const ready = this.timer <= 0;
+        ctx.strokeStyle = ready ? '#00ff00' : '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, this.player.size + 10, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Show empowered state
+        if (this.empoweredTimer > 0) {
+            ctx.fillStyle = '#ffaa00';
+            ctx.font = 'bold 10px Arial';
+            ctx.fillText('POWER!', x - 15, y - this.player.size - 10);
+        }
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class MercenaryAbility {
+    constructor(player, game) {
+        this.name = 'Mercenary';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 5000;
+        this.timer = 0;
+        this.slashCount = 0;
+        this.slashing = false;
+        this.slashDelay = 200;
+        this.slashTimer = 0;
+        this.slashDamage = 80;
+        this.slashDistance = 60;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0 && !this.slashing) {
+            this.slashing = true;
+            this.slashCount = 0;
+            this.slashTimer = 0;
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+
+        if (this.slashing) {
+            this.slashTimer += deltaTime;
+
+            if (this.slashTimer >= this.slashDelay && this.slashCount < 3) {
+                this.performSlash();
+                this.slashCount++;
+                this.slashTimer = 0;
+
+                if (this.slashCount >= 3) {
+                    this.slashing = false;
+                    this.timer = this.cooldown;
+                }
+            }
+        }
+    }
+
+    performSlash() {
+        // Find nearest enemy
+        let target = null;
+        let nearestDist = Infinity;
+
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            const dx = enemy.x - this.player.x;
+            const dy = enemy.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                target = enemy;
+            }
+        });
+
+        // Dash toward target
+        if (target) {
+            const dx = target.x - this.player.x;
+            const dy = target.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            this.player.x += (dx / dist) * this.slashDistance;
+            this.player.y += (dy / dist) * this.slashDistance;
+        }
+
+        // Damage nearby enemies
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            const dx = enemy.x - this.player.x;
+            const dy = enemy.y - this.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 80) {
+                enemy.takeDamage(this.slashDamage);
+            }
+        });
+
+        this.game.soundSystem.playShoot('medium');
+    }
+
+    renderIndicator(ctx, x, y) {
+        const ready = this.timer <= 0 && !this.slashing;
+        ctx.strokeStyle = ready ? '#00ffff' : '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, this.player.size + 10, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (this.slashing) {
+            ctx.fillStyle = '#00ffff';
+            ctx.font = 'bold 10px Arial';
+            ctx.fillText(`SLASH ${this.slashCount}/3`, x - 20, y - this.player.size - 10);
+        }
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class OperatorAbility {
+    constructor(player, game) {
+        this.name = 'Operator';
+        this.player = player;
+        this.game = game;
+    }
+
+    apply() {
+        // Spawn 3 drones
+        for (let i = 0; i < 3; i++) {
+            const isHealer = i === 0; // First drone heals
+            const drone = new OperatorDrone(this.player, this.game, i, isHealer);
+            this.game.entities.push(drone);
+        }
+    }
+
+    use() {}
+    update(deltaTime) {}
+    renderIndicator(ctx, x, y) {}
+    getUpgrades() {
+        return [];
+    }
+}
+
+class OperatorDrone {
+    constructor(owner, game, index, isHealer) {
+        this.type = 'operatorDrone';
+        this.owner = owner;
+        this.game = game;
+        this.index = index;
+        this.isHealer = isHealer;
+        this.alive = true;
+        this.size = 6;
+        this.x = owner.x;
+        this.y = owner.y;
+
+        this.orbitAngle = (Math.PI * 2 / 3) * index;
+        this.orbitRadius = 50;
+        this.damageMultiplier = 0.13;
+
+        this.fireRate = owner.fireRate * 0.13;
+        this.fireTimer = 0;
+        this.healRate = 1; // Heal once per second
+        this.healTimer = 0;
+        this.healAmount = 2;
+    }
+
+    update(deltaTime) {
+        // Orbit around owner
+        this.orbitAngle += deltaTime / 600;
+        this.x = this.owner.x + Math.cos(this.orbitAngle) * this.orbitRadius;
+        this.y = this.owner.y + Math.sin(this.orbitAngle) * this.orbitRadius;
+
+        if (this.isHealer) {
+            // Heal owner
+            this.healTimer += deltaTime;
+            if (this.healTimer >= 1000 / this.healRate) {
+                this.owner.heal(this.healAmount);
+                this.healTimer = 0;
+            }
+        } else {
+            // Fire at enemies
+            this.fireTimer += deltaTime;
+            const fireInterval = 1000 / this.fireRate;
+
+            if (this.fireTimer >= fireInterval) {
+                let target = null;
+                let nearestDist = this.owner.range;
+
+                this.game.enemies.forEach(enemy => {
+                    if (!enemy || !enemy.alive) return;
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        target = enemy;
+                    }
+                });
+
+                if (target) {
+                    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                    const damage = this.owner.currentWeapon.damage * this.damageMultiplier;
+                    this.game.projectiles.push(
+                        new Projectile(this.x, this.y, angle, damage, true, this.game)
+                    );
+                    this.fireTimer = 0;
+                }
+            }
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        ctx.fillStyle = this.isHealer ? '#00ff00' : '#0088ff';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add a border
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+}
+
+class VoidFiendAbility {
+    constructor(player, game) {
+        this.name = 'Void Fiend';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 8000;
+        this.timer = 0;
+        this.beamDuration = 1000;
+        this.beamWidth = 30;
+        this.beamLength = 400;
+        this.beamDamage = 200;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Find nearest enemy
+            let target = null;
+            let nearestDist = Infinity;
+
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            let angle = 0;
+            if (target) {
+                angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            }
+
+            const beam = new VoidBeam(
+                this.player.x, this.player.y, angle,
+                this.beamLength, this.beamWidth, this.beamDamage,
+                this.beamDuration, this.game
+            );
+            this.game.entities.push(beam);
+
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const ready = this.timer <= 0;
+        ctx.strokeStyle = ready ? '#9933ff' : '#ff0000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, this.player.size + 12, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class VoidBeam {
+    constructor(x, y, angle, length, width, damage, duration, game) {
+        this.type = 'voidBeam';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.length = length;
+        this.width = width;
+        this.damage = damage;
+        this.duration = duration;
+        this.game = game;
+        this.alive = true;
+        this.timer = 0;
+        this.hitEnemies = new Set();
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+            return;
+        }
+
+        // Damage enemies in beam
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            if (this.hitEnemies.has(enemy)) return;
+
+            // Check if enemy is in beam path
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > this.length) return;
+
+            const enemyAngle = Math.atan2(dy, dx);
+            let angleDiff = Math.abs(enemyAngle - this.angle);
+            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+            const maxAngleDiff = Math.atan(this.width / dist);
+
+            if (angleDiff < maxAngleDiff) {
+                enemy.takeDamage(this.damage);
+                this.hitEnemies.add(enemy);
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        // Draw beam
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        ctx.rotate(this.angle);
+
+        // Outer glow
+        ctx.fillStyle = `rgba(153, 51, 255, ${alpha * 0.3})`;
+        ctx.fillRect(0, -this.width, this.length, this.width * 2);
+
+        // Inner beam
+        ctx.fillStyle = `rgba(204, 102, 255, ${alpha * 0.8})`;
+        ctx.fillRect(0, -this.width / 2, this.length, this.width);
+
+        // Bright core
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(0, -this.width / 4, this.length, this.width / 2);
+
+        ctx.restore();
     }
 }
 
