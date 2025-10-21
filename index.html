@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arena Shooter</title>
+    <title>Castle Eidolon</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -36,17 +36,25 @@
             </div>
         </div>
 
-        <!-- Multiplayer Setup -->
+        <!-- Start Menu -->
         <div id="multiplayer-setup" class="modal hidden">
             <div class="modal-content">
-                <h2>Multiplayer Setup</h2>
-                <button onclick="game.startSinglePlayer()">Single Player</button>
-                <button onclick="game.startLocalMultiplayer()">Local Multiplayer</button>
-                <div class="network-options">
-                    <h3>Network Multiplayer</h3>
-                    <button onclick="game.hostNetworkGame()">Host Game</button>
-                    <input type="text" id="room-code" placeholder="Room Code">
-                    <button onclick="game.joinNetworkGame()">Join Game</button>
+                <h2>Castle Eidolon</h2>
+                <p style="color: #aaa; margin-bottom: 20px; font-style: italic;">
+                    You are an eternal challenger in Eidolon Castle, a living fortress<br>
+                    corrupted by ancient magic. Face relentless escalating difficulty<br>
+                    through the Castle Pressure Index. No checkpoints. Only mastery.
+                </p>
+                <button onclick="game.startSinglePlayer()">Enter the Castle</button>
+                <div class="network-options" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
+                    <h3 style="color: #888; font-size: 14px;">Game Features</h3>
+                    <p style="color: #666; font-size: 12px;">
+                        • Castle Pressure Index (CPI) - Permanent Difficulty<br>
+                        • 5 Castle Layers with unique environments<br>
+                        • Multiple weapon types and combat styles<br>
+                        • Hub with NPCs for upgrades and lore<br>
+                        • Death returns you to the start with increased CPI
+                    </p>
                 </div>
             </div>
         </div>

@@ -1,161 +1,294 @@
-# Arena Shooter Game
+# Castle Eidolon 🏰
 
-A top-down arena shooter built with HTML5 Canvas and JavaScript. Survive waves of enemies, collect XP, level up, and choose powerful upgrades!
+A brutal Metroidvania roguelike with permanent difficulty escalation. You are an eternal challenger facing the living fortress of Eidolon Castle, where every death and victory makes the castle stronger through the mysterious **Castle Pressure Index (CPI)**.
 
-## 🚀 Deploy to Railway (Play Online!)
+## 🎮 Game Overview
 
-### Quick Deploy:
-1. Go to [Railway.app](https://railway.app)
-2. Click "New Project"
-3. Select "Deploy from GitHub repo"
-4. Choose this repository
-5. Select branch: `claude/update-g-011CULY3FxMajkXD9uG6BucS`
-6. Railway will automatically detect the setup and deploy!
-7. Click the generated URL to play online!
+Castle Eidolon is a side-scrolling action platformer that combines Metroidvania exploration with roguelike permanent progression. The castle adapts relentlessly to your power through the CPI system - a measure of how much your progress threatens its dominion.
 
-### Manual Railway Setup:
-```bash
-# Install Railway CLI
-npm i -g @railway/cli
+**Core Features:**
+- **No Checkpoints** - Death returns you to the castle entrance
+- **Permanent Difficulty** - CPI never resets, only increases
+- **5 Unique Layers** - Each with distinct environments and enemies
+- **Hub System** - NPCs for upgrades, lore, and progression
+- **Multiple Weapon Types** - Choose your combat style
+- **Deep Progression** - Eidolon Cores, Sigils, and milestone rewards
 
-# Login to Railway
-railway login
+## 🚀 How to Play
 
-# Deploy
-railway up
-```
+### Installation & Launch
 
-Your game will be live at a Railway URL like: `https://your-game.up.railway.app`
-
-## 🎮 Play Locally
-
-### Option 1: Direct File Open (Easiest)
-1. Navigate to the project folder
-2. **Double-click `index.html`** - it will open in your default browser
-3. Start playing!
-
-### Option 2: Run with Node.js
 ```bash
 npm install
 npm start
-# Open http://localhost:3000
 ```
 
-### Option 3: From File Explorer
-- **Windows**: Right-click `index.html` → Open with → Chrome/Firefox/Edge
-- **Mac**: Right-click `index.html` → Open With → Chrome/Firefox/Safari
-- **Linux**: Right-click `index.html` → Open With → Browser
+Then open http://localhost:3000 in your browser.
 
-### Option 4: Using Python Server
-```bash
-python -m http.server 8000
-# Open http://localhost:8000
-```
+### Controls
 
-## How to Play
+**Movement:**
+- `A` / `D` - Move left/right
+- `W` / `Space` - Jump
+- `S` - Climb down (on chains)
 
-1. Choose your game mode:
-   - **Single Player** - Play alone
-   - **Local Multiplayer** - Play with a friend on the same computer
-   - **Network Multiplayer** - (Basic implementation) Host or join games across computers
+**Combat:**
+- `Mouse Click` - Attack toward cursor
+- `F` - Block (drains stamina)
+- `Shift` - Roll/Dodge (grants invincibility frames)
 
-## Controls
+**Interaction:**
+- `E` - Interact with NPCs and doors
 
-### Player 1
-- **Movement**: WASD
-- **Auto-fire**: Automatic when enemies are in range
-- **Dash** (if chosen): SPACE
-- **Laser Blade** (if chosen): Q
+## 🏰 Game Structure
 
-### Player 2 (Local Multiplayer)
-- **Movement**: Arrow Keys
-- **Auto-fire**: Automatic when enemies are in range
-- **Dash** (if chosen): ENTER
-- **Laser Blade** (if chosen): SHIFT
+### The Hub
+Your safe haven between delves. Here you'll find:
 
-## Game Features
+- **Blacksmith** 🔨 - Upgrade and reforge weapons
+- **Archivist** 📚 - Study the Grimoire, learn enemy weaknesses
+- **Merchant** 💰 - Buy materials and blueprints
+- **Warden's Spirit** 👻 - Quests, hints, and rare aid
 
-### Starting Abilities
-Choose one permanent ability at the start:
+### Castle Layers
 
-- **Dash** - Quick speed burst on cooldown
-- **Turret** - Deploy a turret for 7 seconds that fires at 150% of your stats
-- **Drone** - Permanent companion that fires at 40% of your stats
-- **Phase Shield** - Stand still for 2 seconds to gain an overshield
-- **Large** - 50% larger, 75% more damage/health, 25% more range, 50% slower
-- **Small** - 40% faster, 30% smaller
-- **Laser Blade** - Create a high-damage ring for 1.5 seconds
+1. **Outer Halls** - Ancient entry corridors
+   - Enemies: Crypt Shades, Iron Guards
+   - Boss: Warden of Halls
 
-### Upgrades
-Level up by collecting XP from defeated enemies. Choose from 3 random upgrades:
+2. **Crypts** - Tomb-filled depths
+   - Enemies: Crypt Shades, Iron Guards, Arcane Familiars
+   - Boss: Warden of Crypts
 
-#### Stat Boosts
-- +10% Max Health
-- +10% Move Speed
-- +10% Damage
-- +10% Fire Rate
-- +10% Fire Range
-- +20% XP Gain
-- +50% Pickup Range
+3. **Iron Chapel** - Corrupted sanctuary
+   - Enemies: Astral Sentinels, Mirror Wraiths, Iron Chapel Acolytes
+   - Boss: Warden of Chapel
 
-#### Special Abilities
-- **Homing Shots** - Your bullets track enemies
-- **Poison Bullets** - Deal damage over time
+4. **Astral Sanctum** - Reality-warped chambers
+   - Enemies: Advanced variants with CPI mutations
+   - Boss: Warden of Sanctum
 
-#### Ability Upgrades
-- Dash: -25% Cooldown
-- Turret: +3s Duration
-- Drone: +15% Damage
-- Phase Shield: +20% HP
-- Large: +20% Damage
-- Small: +Speed & Fire Rate
-- Laser Blade: +Damage
+5. **Eidolon Core** - The heart of corruption
+   - Enemies: Void Knights, Eidolon Heralds
+   - Boss: Warden of Core
 
-### Enemy Types
+## ⚔️ Combat System
 
-| Enemy | Color | Behavior | HP |
-|-------|-------|----------|-----|
-| Basic | Red | Standard chase | Low |
-| Fast | Dark Blue | Quick but fragile | Very Low |
-| Tank | Green | Slow, high HP | High |
-| Ranged | Purple | Shoots from distance | Medium |
-| Boss | Black | Massive HP, spawns minions | Very High |
+### Weapon Types
 
-### Orb System
-- **XP Orbs** (Orange) - Dropped by enemies for leveling up
-- **Healing Orbs** (Green) - 20% drop rate, heals 15% of max health (shared in multiplayer)
+| Type | Description | Damage | Speed | Range |
+|------|-------------|--------|-------|-------|
+| **Light** | Swift Dagger - Fast, precise strikes | Low | Very Fast | Short |
+| **Balanced** | Knight Sword - Versatile and reliable | Medium | Medium | Medium |
+| **Heavy** | War Hammer - Slow, powerful strikes | High | Slow | Short |
+| **Ranged** | Mystic Bow - Attack from distance | Medium | Fast | Long |
+| **Hybrid** | Enchanted Blade - Melee & magic mix | High | Medium | Medium-Long |
 
-### World Scaling
-- World Level increases every 30 seconds
-- Enemy stats increase by 8% per world level
-- Enemies spawn more frequently as the game progresses
-- Boss spawns every 60 seconds
+### Combat Mechanics
 
-## Multiplayer Features
+- **Rolling** - Dodge attacks with invincibility frames (i-frames)
+- **Blocking** - Reduces damage by 70%, drains stamina
+- **Chain Climbing** - Vertical traversal for tactical positioning
+- **Weapon Cooldowns** - Each weapon has attack speed limits
 
-### Local Multiplayer
-- Two players on the same keyboard
-- Shared XP and upgrades
-- Player 1 selects upgrades (Player 2 waits)
-- Enemies can target either player
-- Shared healing orbs
+## 📊 Castle Pressure Index (CPI)
 
-### Network Multiplayer
-- Host creates a room and gets a code
-- Client joins using the room code
-- Basic implementation (placeholder for WebRTC/WebSocket)
+The CPI is the core difficulty system that creates permanent escalation:
 
-## Game Over
-The game ends when all players are defeated. Your survival time and world level reached will be displayed.
+### How CPI Increases
+- **Death:** +3 CPI per death
+- **Layer Progress:** +2 CPI per layer entered
+- **Never Decreases** - Your struggle is permanent
 
-## Technical Details
-- Built with vanilla JavaScript (no frameworks)
-- HTML5 Canvas for rendering
-- 60 FPS game loop
-- Infinite scrolling map
-- Smooth camera following players
+### CPI Effects
+- **Enemy Stats:** +2% health/damage per CPI point
+- **Enemy Speed:** +20% at CPI 50+
+- **Enemy Health:** +50% at CPI 80+
+- **Mutations:** New abilities and behaviors at high CPI
+- **Loot Quality:** Better rewards at higher CPI
 
-## Credits
-Created as a fun arena shooter with roguelike progression elements!
+### CPI Threat Levels
 
-Enjoy the game and see how long you can survive!
+| CPI Range | Color | Threat Level |
+|-----------|-------|--------------|
+| 0-20 | Green | Novice |
+| 20-40 | Yellow-Green | Challenging |
+| 40-60 | Yellow | Dangerous |
+| 60-80 | Orange | Brutal |
+| 80-100 | Red-Orange | Extreme |
+| 100+ | Red | Impossible |
+
+## 🏆 Progression & Rewards
+
+### CPI Milestone Rewards
+
+| CPI | Reward | Effect |
+|-----|--------|--------|
+| 10 | Weapon Upgrade Token | Enhance weapon stats |
+| 25 | Additional Sigil Slot | More build diversity |
+| 40 | Skill Point | Unlock new abilities |
+| 60 | Unique Weapon | Rare weapon type |
+| 80 | Combat Technique | Advanced moves |
+| 100 | Eidolon Core | Major permanent boost |
+| 120+ | Cosmetics & Titles | Prestige rewards |
+
+### Eidolon Cores
+Permanent meta-progression earned from defeating Wardens and reaching high CPI milestones. These provide:
+- Increased base stats
+- Unlock new starting weapons
+- Permanent passive bonuses
+- Access to advanced Sigils
+
+### Sigils System
+Equippable modifiers that change your playstyle:
+- Damage boosts
+- Elemental effects
+- Defensive buffs
+- Movement enhancements
+- Special abilities
+
+## 🎨 Visual Design
+
+### Layer Environments
+
+Each layer has a unique color palette:
+
+- **Hub:** Dark blue-gray (#1a1a2e)
+- **Outer Halls:** Dark red (#2a1a1a)
+- **Crypts:** Dark green (#1a2a1a)
+- **Iron Chapel:** Deep blue (#1a1a3a)
+- **Astral Sanctum:** Purple (#3a1a3a)
+- **Eidolon Core:** Black void (#0a0a0a)
+
+### UI Elements
+- **CPI Meter** - Color-coded threat level display
+- **Layer Indicator** - Current location name
+- **Health Bar** - Real-time player health
+- **Weapon Info** - Current weapon and damage
+- **Stamina** - For rolling and blocking
+
+## 👾 Enemy Bestiary
+
+### Layer 1 Enemies
+
+**Crypt Shade**
+- Ghostly teleporting wraith
+- Low health, medium speed
+- Behavior: Short-range teleportation
+
+**Iron Guard**
+- Rusted armored soldier
+- High health, slow movement
+- Behavior: Tank, heavy contact damage
+
+**Arcane Familiar**
+- Glowing magic construct
+- Low health, ranged attacks
+- Behavior: Keeps distance, fires projectiles
+
+### Layer 3+ Enemies
+
+**Astral Sentinel**
+- Floating rune-covered armor
+- Teleports and fires magic blasts
+- Behavior: Teleport + ranged hybrid
+
+**Mirror Wraith**
+- Reflective, phasing entity
+- Medium health, fast movement
+- Behavior: Phase through terrain
+
+**Iron Chapel Acolyte**
+- Cursed chain-wielding priest
+- Medium-high health, melee + curse
+- Behavior: Aggressive melee with debuffs
+
+### Wardens (Bosses)
+
+Each layer ends with a Warden boss battle:
+- **Massive health pools** (300-800+ HP, scaling with CPI)
+- **Ranged + melee attacks**
+- **Spawn minions**
+- **Grant 200-400 XP**
+- **Drop Eidolon Core fragments**
+
+## 💾 Persistent Progression
+
+The game saves to browser `localStorage`:
+- Total CPI (from deaths + progress)
+- Max layer reached
+- Total deaths
+- Eidolon Cores collected
+- Milestone rewards unlocked
+
+**Death is permanent progress** - Even when you die and return to the hub, the CPI increase remains forever.
+
+## 🎯 Strategy Tips
+
+1. **Master Rolling** - I-frames are crucial for surviving high CPI
+2. **Use Terrain** - Platforms and chains provide tactical advantages
+3. **Block Wisely** - Blocking drains stamina; use it strategically
+4. **Study Enemies** - Visit the Archivist to learn weaknesses
+5. **Upgrade Smart** - Focus on weapon upgrades early
+6. **CPI Management** - Every death makes future runs harder
+7. **Explore the Hub** - NPCs offer valuable upgrades
+8. **Chain Climbing** - Vertical movement is key for dodging
+
+## 🔧 Technical Details
+
+### Architecture
+- **Engine:** Vanilla JavaScript with HTML5 Canvas
+- **Server:** Express.js
+- **Rendering:** 2D Canvas with camera system
+- **Physics:** Custom gravity and collision detection
+- **Save System:** Browser localStorage
+
+### Game Loop
+60 FPS target with delta-time smoothing for consistent physics across framerates.
+
+### Platform Collision
+One-way platform system - fall through from below, land on from above.
+
+## 📝 Lore
+
+*Legends say the castle was built to imprison a primordial force.*
+
+*Wardens, corrupted guardians, seek to end intruders with brutal efficiency.*
+
+*The Castle Pressure Index measures how much your power threatens the castle's dominion.*
+
+*Every death, every advance, every victory feeds the castle's corruption.*
+
+*Your goal: Delve deeper, defeat Wardens, harness Eidolon Cores - sources of immense power.*
+
+*The castle is eternal. Are you?*
+
+## 🚀 Future Enhancements
+
+Potential additions for expanded gameplay:
+
+- **More Weapon Types** - Whips, spells, crossbows
+- **Deeper Sigil System** - Synergies and set bonuses
+- **Procedural Generation** - Randomized layer layouts
+- **More Enemies** - 20+ unique enemy types
+- **Boss Variations** - Multiple phases and attack patterns
+- **Grimoire Completion** - Full enemy encyclopedia
+- **Challenge Rooms** - Optional high-risk/high-reward areas
+- **Meta-Upgrades** - Permanent unlocks using Eidolon Cores
+- **Sound & Music** - Atmospheric audio design
+- **Visual Effects** - Particles, screen shake, damage numbers
+
+## 🎓 Credits
+
+Game Design: Based on the Castle Eidolon design document
+Implementation: Built with vanilla JavaScript
+Art Style: Minimalist geometric with dark fantasy palette
+Inspired by: Dark Souls, Hollow Knight, Dead Cells, Hades
+
+## 📜 License
+
+MIT License - Feel free to fork and expand!
+
+---
+
+**Castle Eidolon** - *No checkpoints. Only mastery.*

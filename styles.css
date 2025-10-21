@@ -5,9 +5,9 @@
 }
 
 body {
-    background: #1a1a1a;
-    font-family: 'Arial', sans-serif;
-    color: #fff;
+    background: #0a0a0a;
+    font-family: 'Georgia', serif;
+    color: #ddd;
     overflow: hidden;
 }
 
@@ -53,8 +53,10 @@ body {
 
 .modal-content h2 {
     margin-bottom: 30px;
-    color: #00ffff;
-    font-size: 32px;
+    color: #aa88ff;
+    font-size: 36px;
+    font-family: 'Georgia', serif;
+    text-shadow: 0 0 10px rgba(170, 136, 255, 0.5);
 }
 
 .modal-content h3 {
@@ -96,9 +98,9 @@ body {
 }
 
 button {
-    background: #00ffff;
-    color: #000;
-    border: none;
+    background: #8866ff;
+    color: #fff;
+    border: 2px solid #aa88ff;
     padding: 15px 30px;
     font-size: 18px;
     font-weight: bold;
@@ -106,11 +108,14 @@ button {
     cursor: pointer;
     margin: 10px;
     transition: all 0.3s;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 0 10px rgba(136, 102, 255, 0.3);
 }
 
 button:hover {
-    background: #00cccc;
+    background: #aa88ff;
     transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(170, 136, 255, 0.6);
 }
 
 input[type="text"] {
