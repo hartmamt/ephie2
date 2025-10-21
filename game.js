@@ -3212,11 +3212,11 @@ class OperatorDrone {
         this.orbitRadius = 50;
         this.damageMultiplier = 0.13;
 
-        this.fireRate = owner.fireRate * 0.13;
+        this.fireRate = owner.fireRate * 0.3; // Buffed from 0.13
         this.fireTimer = 0;
         this.healRate = 1; // Heal once per second
         this.healTimer = 0;
-        this.healAmount = 2;
+        this.healAmount = 1; // Nerfed from 2
     }
 
     update(deltaTime) {
