@@ -1,4 +1,4 @@
-// Arena Shooter Game - v4.1.0
+// Arena Shooter Game - v4.1.1
 // MAJOR UPDATE: Risk of Rain Content + Boss Upgrades
 
 class Game {
@@ -44,8 +44,8 @@ class Game {
         this.spawnInterval = 1000; // Spawn every 1 second (was 2)
         this.bossSpawnTimer = 0;
         this.bossSpawnInterval = 60000; // Boss every 60 seconds
-        this.currentBossType = 0; // Rotates through boss types
-        this.bossTypes = ['Hydra', 'Golem', 'Necromancer'];
+        this.bossTypes = ['Hydra', 'Golem', 'Necromancer', 'Robot', 'Kraken', 'Dragon'];
+        this.bossSpawnCount = 0; // Track how many bosses have spawned for scaling
 
         // Multiplayer
         this.multiplayerMode = null; // 'local', 'host', 'client'
@@ -487,7 +487,7 @@ class Game {
         this.updateCamera();
 
         // Spawn initial walls
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 30; i++) {
             this.spawnWall();
         }
 
@@ -720,22 +720,34 @@ class Game {
         const x = this.cameraX + this.canvas.width / 2;
         const y = this.cameraY - 100;
 
-        const bossType = this.bossTypes[this.currentBossType];
+        // Random boss selection
+        const bossType = this.bossTypes[Math.floor(Math.random() * this.bossTypes.length)];
+
+        // Difficulty scaling based on spawn count
+        const difficultyScale = 1 + this.bossSpawnCount * 0.15; // +15% per boss spawned
 
         switch(bossType) {
             case 'Hydra':
-                this.enemies.push(new HydraBoss(x, y, this));
+                this.enemies.push(new HydraBoss(x, y, this, difficultyScale));
                 break;
             case 'Golem':
-                this.enemies.push(new GolemBoss(x, y, this));
+                this.enemies.push(new GolemBoss(x, y, this, difficultyScale));
                 break;
             case 'Necromancer':
-                this.enemies.push(new NecromancerBoss(x, y, this));
+                this.enemies.push(new NecromancerBoss(x, y, this, difficultyScale));
+                break;
+            case 'Robot':
+                this.enemies.push(new RobotBoss(x, y, this, difficultyScale));
+                break;
+            case 'Kraken':
+                this.enemies.push(new KrakenBoss(x, y, this, difficultyScale));
+                break;
+            case 'Dragon':
+                this.enemies.push(new DragonBoss(x, y, this, difficultyScale));
                 break;
         }
 
-        // Rotate to next boss type
-        this.currentBossType = (this.currentBossType + 1) % this.bossTypes.length;
+        this.bossSpawnCount++;
     }
 
     spawnWall() {
@@ -743,9 +755,9 @@ class Game {
         const player = this.players.find(p => p && p.health > 0);
         if (!player) return;
 
-        // Spawn walls around the play area, not too close to player
-        const minDistance = 300;
-        const maxDistance = 800;
+        // Spawn walls farther apart around the play area
+        const minDistance = 600; // Increased from 300
+        const maxDistance = 1400; // Increased from 800
         const angle = Math.random() * Math.PI * 2;
         const distance = minDistance + Math.random() * (maxDistance - minDistance);
 
@@ -1136,15 +1148,11 @@ class Game {
         // Boss Timer - centered at top
         const timeUntilBoss = Math.max(0, this.bossSpawnInterval - this.bossSpawnTimer);
         const bossSeconds = Math.ceil(timeUntilBoss / 1000);
-        const nextBoss = this.bossTypes[this.currentBossType];
 
         this.ctx.font = 'bold 24px Arial';
         this.ctx.fillStyle = '#ff0000';
         this.ctx.textAlign = 'center';
         this.ctx.fillText(`BOSS IN ${bossSeconds}s`, this.canvas.width / 2, padding + 25);
-        this.ctx.font = '16px Arial';
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillText(`Next: ${nextBoss}`, this.canvas.width / 2, padding + 48);
         this.ctx.textAlign = 'left';
 
         // XP Bar
@@ -1204,7 +1212,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('v4.1.0', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('v4.1.1', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -2569,7 +2577,7 @@ class Explosion {
 // BOSS CLASSES - v3.0.6
 
 class HydraBoss {
-    constructor(x, y, game) {
+    constructor(x, y, game, difficultyScale = 1) {
         this.x = x;
         this.y = y;
         this.game = game;
@@ -2579,15 +2587,15 @@ class HydraBoss {
         this.size = 25;
         this.color = '#00dd00';
 
-        const scale = 1 + (game.worldLevel - 1) * 0.08;
+        const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
         this.maxHealth = 600 * scale; // Buffed from 400
         this.health = this.maxHealth;
-        this.speed = 50;
+        this.speed = 50 * Math.min(difficultyScale, 1.5); // Cap speed scaling
         this.damage = 6 * scale;
         this.contactDamage = 8 * scale;
-        this.xpValue = 250;
+        this.xpValue = 250 * difficultyScale;
 
-        this.fireRate = 0.8; // Buffed from 0.5 - shoots more often
+        this.fireRate = 0.8 * Math.min(difficultyScale, 2); // Cap fire rate scaling
         this.fireTimer = 0;
         this.range = 500;
 
@@ -2724,7 +2732,7 @@ class HydraBoss {
 }
 
 class GolemBoss {
-    constructor(x, y, game) {
+    constructor(x, y, game, difficultyScale = 1) {
         this.x = x;
         this.y = y;
         this.game = game;
@@ -2734,15 +2742,15 @@ class GolemBoss {
         this.size = 35;
         this.color = '#8b4513';
 
-        const scale = 1 + (game.worldLevel - 1) * 0.08;
+        const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
         this.maxHealth = 900 * scale; // Buffed from 600
         this.health = this.maxHealth;
-        this.speed = 30;
+        this.speed = 30 * Math.min(difficultyScale, 1.5); // Cap speed scaling
         this.damage = 12 * scale;
         this.contactDamage = 15 * scale;
-        this.xpValue = 300;
+        this.xpValue = 300 * difficultyScale;
 
-        this.fireRate = 0.5; // Buffed from 0.3 - shoots more often
+        this.fireRate = 0.5 * Math.min(difficultyScale, 2); // Buffed from 0.3 - shoots more often
         this.fireTimer = 0;
         this.range = 600;
 
@@ -2863,7 +2871,7 @@ class GolemBoss {
 }
 
 class NecromancerBoss {
-    constructor(x, y, game) {
+    constructor(x, y, game, difficultyScale = 1) {
         this.x = x;
         this.y = y;
         this.game = game;
@@ -2873,15 +2881,15 @@ class NecromancerBoss {
         this.size = 18;
         this.color = '#9933ff';
 
-        const scale = 1 + (game.worldLevel - 1) * 0.08;
+        const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
         this.maxHealth = 300 * scale; // Buffed from 200
         this.health = this.maxHealth;
-        this.speed = 70; // Medium speed
+        this.speed = 70 * Math.min(difficultyScale, 1.5); // Medium speed
         this.damage = 4 * scale; // Weak damage
         this.contactDamage = 5 * scale;
-        this.xpValue = 200;
+        this.xpValue = 200 * difficultyScale;
 
-        this.summonRate = 2.0; // Buffed from 1.5 - summons more often
+        this.summonRate = 2.0 * Math.min(difficultyScale, 2); // Buffed from 1.5 - summons more often
         this.summonTimer = 0;
         this.range = 400;
 
@@ -3148,7 +3156,706 @@ class PurpleMinion {
     }
 }
 
-// RISK OF RAIN ABILITIES - v4.1.0
+class RobotBoss {
+    constructor(x, y, game, difficultyScale = 1) {
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.type = 'robot';
+        this.isBoss = true;
+        this.alive = true;
+        this.size = 28;
+        this.color = '#aaaaaa';
+
+        const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
+        this.maxHealth = 700 * scale;
+        this.health = this.maxHealth;
+        this.speed = 60 * Math.min(difficultyScale, 1.5);
+        this.damage = 8 * scale;
+        this.contactDamage = 10 * scale;
+        this.xpValue = 280 * difficultyScale;
+
+        this.fireRate = 1.0 * Math.min(difficultyScale, 2);
+        this.fireTimer = 0;
+        this.range = 550;
+
+        this.poisonStacks = 0;
+        this.poisonTimer = 0;
+    }
+
+    update(deltaTime, target) {
+        if (!target) return;
+
+        const dt = deltaTime / 1000;
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Move toward target
+        this.x += (dx / dist) * this.speed * dt;
+        this.y += (dy / dist) * this.speed * dt;
+
+        // Fire bouncing projectiles
+        if (dist < this.range) {
+            this.fireTimer += deltaTime;
+            const fireInterval = 1000 / this.fireRate;
+
+            if (this.fireTimer >= fireInterval) {
+                const angle = Math.atan2(dy, dx);
+                const bouncingProj = new BouncingProjectile(this.x, this.y, angle, this.damage, 6, this.game);
+                this.game.entities.push(bouncingProj);
+                this.game.soundSystem.playShoot('heavy');
+                this.fireTimer = 0;
+            }
+        }
+
+        // Poison damage
+        if (this.poisonStacks > 0) {
+            this.poisonTimer += deltaTime;
+            if (this.poisonTimer >= 1000) {
+                this.health -= this.poisonStacks;
+                this.poisonTimer = 0;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    takeDamage(amount, projectile) {
+        this.health -= amount;
+
+        if (projectile && projectile.poison) {
+            this.poisonStacks = Math.min(10, this.poisonStacks + 1);
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
+
+        // Drop orbs
+        const xpOrbs = Math.floor(this.xpValue / 5);
+        for (let i = 0; i < xpOrbs; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 40;
+            const x = this.x + Math.cos(angle) * dist;
+            const y = this.y + Math.sin(angle) * dist;
+            this.game.orbs.push(new Orb(x, y, 'xp', 5));
+        }
+
+        // Instant level up
+        this.game.players.forEach(player => {
+            if (player) player.levelUp();
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Robot body - metallic gray
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Metallic border
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Red eye
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        const barWidth = this.size * 2;
+        const barHeight = 4;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - this.size - 10;
+
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // BOSS label
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('ROBOT BOSS', screenX, barY - 5);
+        ctx.textAlign = 'left';
+    }
+}
+
+class BouncingProjectile {
+    constructor(x, y, angle, damage, maxBounces, game) {
+        this.type = 'bouncingProjectile';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.damage = damage;
+        this.maxBounces = maxBounces;
+        this.bounces = 0;
+        this.game = game;
+        this.speed = 450;
+        this.alive = true;
+        this.size = 7;
+        this.lifetime = 8000; // 8 seconds max
+        this.timer = 0;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+        if (this.timer >= this.lifetime || this.bounces >= this.maxBounces) {
+            this.alive = false;
+            return;
+        }
+
+        // Move
+        const dt = deltaTime / 1000;
+        this.x += Math.cos(this.angle) * this.speed * dt;
+        this.y += Math.sin(this.angle) * this.speed * dt;
+
+        // Check collisions with players
+        this.game.players.forEach(player => {
+            if (!player || player.health <= 0) return;
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < player.size + this.size) {
+                player.takeDamage(this.damage);
+                // Bounce off player
+                this.angle = Math.atan2(-dy, -dx) + (Math.random() - 0.5) * 0.5;
+                this.bounces++;
+                this.game.soundSystem.playShoot('normal');
+            }
+        });
+
+        // Check collisions with walls - bounce off them
+        this.game.walls.forEach(wall => {
+            if (wall.checkCollision(this.x, this.y, this.size)) {
+                // Reverse direction and add randomness
+                this.angle += Math.PI + (Math.random() - 0.5) * 0.3;
+                this.bounces++;
+                this.game.soundSystem.playShoot('normal');
+
+                // Push out of wall
+                const pushOut = wall.getPushOut(this.x, this.y, this.size);
+                this.x += pushOut.x * 2;
+                this.y += pushOut.y * 2;
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Gray metallic projectile
+        ctx.save();
+        ctx.fillStyle = '#cccccc';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glow
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+class KrakenBoss {
+    constructor(x, y, game, difficultyScale = 1) {
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.type = 'kraken';
+        this.isBoss = true;
+        this.alive = true;
+        this.size = 75; // 600% larger than player (player is ~12)
+        this.color = '#1a5f7a';
+
+        const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
+        this.maxHealth = 1500 * scale; // Lots of health
+        this.health = this.maxHealth;
+        this.speed = 20 * Math.min(difficultyScale, 1.3); // Slow movement
+        this.damage = 15 * scale;
+        this.contactDamage = 20 * scale;
+        this.xpValue = 400 * difficultyScale;
+
+        this.tentacleRate = 0.5 * Math.min(difficultyScale, 1.5); // Slow attack
+        this.tentacleTimer = 0;
+        this.range = 700;
+
+        this.poisonStacks = 0;
+        this.poisonTimer = 0;
+    }
+
+    update(deltaTime, target) {
+        if (!target) return;
+
+        const dt = deltaTime / 1000;
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Move slowly toward target
+        this.x += (dx / dist) * this.speed * dt;
+        this.y += (dy / dist) * this.speed * dt;
+
+        // Spawn jabbing tentacles
+        if (dist < this.range) {
+            this.tentacleTimer += deltaTime;
+            const attackInterval = 1000 / this.tentacleRate;
+
+            if (this.tentacleTimer >= attackInterval) {
+                // Spawn 3 tentacles around target
+                for (let i = 0; i < 3; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 80 + Math.random() * 60;
+                    const tentacleX = target.x + Math.cos(angle) * distance;
+                    const tentacleY = target.y + Math.sin(angle) * distance;
+
+                    const tentacle = new KrakenTentacle(tentacleX, tentacleY, this.damage, this.game);
+                    this.game.entities.push(tentacle);
+                }
+                this.game.soundSystem.playShoot('heavy');
+                this.tentacleTimer = 0;
+            }
+        }
+
+        // Poison damage
+        if (this.poisonStacks > 0) {
+            this.poisonTimer += deltaTime;
+            if (this.poisonTimer >= 1000) {
+                this.health -= this.poisonStacks;
+                this.poisonTimer = 0;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    takeDamage(amount, projectile) {
+        this.health -= amount;
+
+        if (projectile && projectile.poison) {
+            this.poisonStacks = Math.min(10, this.poisonStacks + 1);
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
+
+        // Drop lots of orbs
+        const xpOrbs = Math.floor(this.xpValue / 5);
+        for (let i = 0; i < xpOrbs; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 60;
+            const x = this.x + Math.cos(angle) * dist;
+            const y = this.y + Math.sin(angle) * dist;
+            this.game.orbs.push(new Orb(x, y, 'xp', 5));
+        }
+
+        // Instant level up
+        this.game.players.forEach(player => {
+            if (player) player.levelUp();
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Huge kraken body - deep blue
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Darker outline
+        ctx.strokeStyle = '#0d3d52';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Tentacle hints (just visual decorations)
+        ctx.fillStyle = '#0d3d52';
+        for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 / 8) * i;
+            const tx = screenX + Math.cos(angle) * (this.size * 0.7);
+            const ty = screenY + Math.sin(angle) * (this.size * 0.7);
+            ctx.beginPath();
+            ctx.arc(tx, ty, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Eyes
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.arc(screenX - 15, screenY - 10, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 15, screenY - 10, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        const barWidth = this.size * 2;
+        const barHeight = 6;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - this.size - 15;
+
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // BOSS label
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('KRAKEN BOSS', screenX, barY - 5);
+        ctx.textAlign = 'left';
+    }
+}
+
+class KrakenTentacle {
+    constructor(x, y, damage, game) {
+        this.type = 'krakenTentacle';
+        this.x = x;
+        this.y = y;
+        this.targetX = x;
+        this.targetY = y;
+        this.damage = damage;
+        this.game = game;
+        this.alive = true;
+        this.size = 12;
+
+        // Slowly jab upward
+        this.phase = 'warning'; // warning -> jabbing -> retracting
+        this.phaseTimer = 0;
+        this.warningDuration = 800; // Show warning
+        this.jabDuration = 400; // Quick jab
+        this.jabHeight = -150; // How far it jabs up
+        this.currentHeight = 0;
+        this.hasHit = false;
+    }
+
+    update(deltaTime) {
+        this.phaseTimer += deltaTime;
+
+        if (this.phase === 'warning') {
+            // Just show warning circle
+            if (this.phaseTimer >= this.warningDuration) {
+                this.phase = 'jabbing';
+                this.phaseTimer = 0;
+            }
+        } else if (this.phase === 'jabbing') {
+            // Jab upward
+            const progress = this.phaseTimer / this.jabDuration;
+            this.currentHeight = this.jabHeight * Math.sin(progress * Math.PI);
+
+            // Check collision with players
+            if (!this.hasHit) {
+                this.game.players.forEach(player => {
+                    if (!player || player.health <= 0) return;
+                    const dx = player.x - this.x;
+                    const dy = player.y - (this.y + this.currentHeight);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < player.size + this.size) {
+                        player.takeDamage(this.damage);
+                        this.hasHit = true;
+                    }
+                });
+            }
+
+            if (this.phaseTimer >= this.jabDuration) {
+                this.alive = false;
+            }
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y + this.currentHeight);
+
+        if (this.phase === 'warning') {
+            // Red warning circle
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(screenX, game.toScreenY(this.y), this.size + 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        } else {
+            // Tentacle - same color as kraken
+            ctx.save();
+            ctx.fillStyle = '#1a5f7a';
+            ctx.strokeStyle = '#0d3d52';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+}
+
+class DragonBoss {
+    constructor(x, y, game, difficultyScale = 1) {
+        this.x = x;
+        this.y = y;
+        this.game = game;
+        this.type = 'dragon';
+        this.isBoss = true;
+        this.alive = true;
+        this.size = 32;
+        this.color = '#ff0000'; // Bright red
+
+        const scale = (1 + (game.worldLevel - 1) * 0.08) * difficultyScale;
+        this.maxHealth = 800 * scale;
+        this.health = this.maxHealth;
+        this.speed = 55 * Math.min(difficultyScale, 1.5);
+        this.damage = 10 * scale;
+        this.contactDamage = 12 * scale;
+        this.xpValue = 320 * difficultyScale;
+
+        this.flameRate = 0.6 * Math.min(difficultyScale, 1.5);
+        this.flameTimer = 0;
+        this.range = 600;
+
+        this.poisonStacks = 0;
+        this.poisonTimer = 0;
+    }
+
+    update(deltaTime, target) {
+        if (!target) return;
+
+        const dt = deltaTime / 1000;
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Move toward target
+        this.x += (dx / dist) * this.speed * dt;
+        this.y += (dy / dist) * this.speed * dt;
+
+        // Breathe flames
+        if (dist < this.range) {
+            this.flameTimer += deltaTime;
+            const attackInterval = 1000 / this.flameRate;
+
+            if (this.flameTimer >= attackInterval) {
+                const angle = Math.atan2(dy, dx);
+
+                // Create flamethrower effect - spawn flames in a cone
+                for (let i = 0; i < 8; i++) {
+                    const spreadAngle = angle + (Math.random() - 0.5) * 0.4;
+                    const flameDistance = 50 + i * 40;
+                    const flameX = this.x + Math.cos(spreadAngle) * flameDistance;
+                    const flameY = this.y + Math.sin(spreadAngle) * flameDistance;
+
+                    const flame = new DragonFlame(flameX, flameY, this.damage, this.game);
+                    this.game.entities.push(flame);
+                }
+
+                this.game.soundSystem.playShoot('heavy');
+                this.flameTimer = 0;
+            }
+        }
+
+        // Poison damage
+        if (this.poisonStacks > 0) {
+            this.poisonTimer += deltaTime;
+            if (this.poisonTimer >= 1000) {
+                this.health -= this.poisonStacks;
+                this.poisonTimer = 0;
+            }
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    takeDamage(amount, projectile) {
+        this.health -= amount;
+
+        if (projectile && projectile.poison) {
+            this.poisonStacks = Math.min(10, this.poisonStacks + 1);
+        }
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
+
+        // Drop orbs
+        const xpOrbs = Math.floor(this.xpValue / 5);
+        for (let i = 0; i < xpOrbs; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 50;
+            const x = this.x + Math.cos(angle) * dist;
+            const y = this.y + Math.sin(angle) * dist;
+            this.game.orbs.push(new Orb(x, y, 'xp', 5));
+        }
+
+        // Instant level up
+        this.game.players.forEach(player => {
+            if (player) player.levelUp();
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Bright red dragon body
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Orange outline for fire effect
+        ctx.strokeStyle = '#ff8800';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Yellow eyes
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.arc(screenX - 8, screenY - 6, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 8, screenY - 6, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Health bar
+        const barWidth = this.size * 2;
+        const barHeight = 5;
+        const barX = screenX - barWidth / 2;
+        const barY = screenY - this.size - 12;
+
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // BOSS label
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('DRAGON BOSS', screenX, barY - 5);
+        ctx.textAlign = 'left';
+    }
+}
+
+class DragonFlame {
+    constructor(x, y, damage, game) {
+        this.type = 'dragonFlame';
+        this.x = x;
+        this.y = y;
+        this.damage = damage;
+        this.game = game;
+        this.alive = true;
+        this.radius = 25;
+        this.duration = 3000; // Lasts 3 seconds
+        this.timer = 0;
+        this.damageInterval = 300; // Damage every 0.3 seconds
+        this.damageTimer = 0;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+            return;
+        }
+
+        // Damage players in flame
+        this.damageTimer += deltaTime;
+        if (this.damageTimer >= this.damageInterval) {
+            this.game.players.forEach(player => {
+                if (!player || player.health <= 0) return;
+
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < this.radius + player.size) {
+                    player.takeDamage(this.damage);
+                }
+            });
+            this.damageTimer = 0;
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        // Draw flame
+        ctx.save();
+
+        // Outer glow - orange
+        ctx.fillStyle = `rgba(255, 136, 0, ${alpha * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main flame - red/orange
+        ctx.fillStyle = `rgba(255, 68, 0, ${alpha * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner flame - yellow
+        ctx.fillStyle = `rgba(255, 255, 0, ${alpha * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+// RISK OF RAIN ABILITIES - v4.1.1
 
 class CommandoAbility {
     constructor(player, game) {
@@ -4153,10 +4860,16 @@ class ChefAbility {
                 angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
             }
 
-            const knife = new BoomerangKnife(
-                this.player.x, this.player.y, angle, this.damage, this.player, this.game
-            );
-            this.game.entities.push(knife);
+            // Throw 3 knives in a spread pattern
+            const spreadAngle = Math.PI / 6; // 30 degrees spread
+            for (let i = -1; i <= 1; i++) {
+                const knifeAngle = angle + (i * spreadAngle / 2);
+                const knife = new BoomerangKnife(
+                    this.player.x, this.player.y, knifeAngle, this.damage, this.player, this.game
+                );
+                this.game.entities.push(knife);
+            }
+
             this.timer = this.cooldown;
             this.game.soundSystem.playShoot('normal');
         }
