@@ -458,9 +458,19 @@ class Game {
         // Enemies vs players (contact damage)
         this.enemies.forEach(enemy => {
             this.players.forEach(player => {
-                if (player && this.circleCollision(enemy.x, enemy.y, enemy.size, player.x, player.y, player.size)) {
+                if (player && player.health > 0 && this.circleCollision(enemy.x, enemy.y, enemy.size, player.x, player.y, player.size)) {
                     // Apply damage per second, scaled by deltaTime
                     player.takeDamage(enemy.contactDamage * (deltaTime / 1000));
+
+                    // Push enemy away slightly to prevent sticking
+                    const dx = enemy.x - player.x;
+                    const dy = enemy.y - player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 0) {
+                        const pushStrength = 50;
+                        enemy.x += (dx / dist) * pushStrength * (deltaTime / 1000);
+                        enemy.y += (dy / dist) * pushStrength * (deltaTime / 1000);
+                    }
                 }
             });
         });
@@ -604,6 +614,8 @@ class Game {
     }
 
     gameOver() {
+        if (this.state === 'game-over') return; // Prevent multiple calls
+
         this.state = 'game-over';
         document.getElementById('final-time').textContent = this.formatTime(this.survivalTime);
         document.getElementById('final-level').textContent = this.worldLevel;
@@ -745,14 +757,17 @@ class Player {
         this.color = index === 0 ? '#00ffff' : '#ff8800';
 
         // Stats
-        this.maxHealth = 100;
-        this.health = 100;
+        this.maxHealth = 150; // Increased from 100
+        this.health = 150;
         this.speed = 200;
         this.damage = 10;
         this.fireRate = 8; // shots per second (increased from 5)
         this.range = 500; // increased range significantly
         this.homingShots = false;
         this.poisonBullets = false;
+
+        // Damage feedback
+        this.damageFlash = 0;
 
         // Shield
         this.maxShield = 0;
@@ -819,6 +834,11 @@ class Player {
         if (this.ability) {
             this.ability.update(deltaTime);
         }
+
+        // Update damage flash
+        if (this.damageFlash > 0) {
+            this.damageFlash -= deltaTime;
+        }
     }
 
     fire() {
@@ -850,6 +870,10 @@ class Player {
     }
 
     takeDamage(amount) {
+        if (amount > 0) {
+            this.damageFlash = 200; // Flash for 200ms
+        }
+
         if (this.shield > 0) {
             this.shield -= amount;
             if (this.shield < 0) {
@@ -877,8 +901,12 @@ class Player {
         const screenX = game.toScreenX(this.x);
         const screenY = game.toScreenY(this.y);
 
-        // Draw player
-        ctx.fillStyle = this.color;
+        // Draw player (flash red when taking damage)
+        if (this.damageFlash > 0) {
+            ctx.fillStyle = '#ff0000';
+        } else {
+            ctx.fillStyle = this.color;
+        }
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
         ctx.fill();
@@ -943,8 +971,8 @@ class Enemy {
                 this.color = '#ff0000';
                 this.maxHealth = 20 * scale;
                 this.speed = 80;
-                this.damage = 2 * scale; // Reduced from 5
-                this.contactDamage = 3 * scale; // Reduced from 10
+                this.damage = 2 * scale;
+                this.contactDamage = 1.5 * scale; // Further reduced
                 this.xpValue = 10;
                 break;
             case 'fast':
@@ -952,8 +980,8 @@ class Enemy {
                 this.color = '#0044ff';
                 this.maxHealth = 10 * scale;
                 this.speed = 150;
-                this.damage = 1.5 * scale; // Reduced from 3
-                this.contactDamage = 2 * scale; // Reduced from 5
+                this.damage = 1.5 * scale;
+                this.contactDamage = 1 * scale; // Further reduced
                 this.xpValue = 8;
                 break;
             case 'tank':
@@ -961,8 +989,8 @@ class Enemy {
                 this.color = '#00ff00';
                 this.maxHealth = 80 * scale;
                 this.speed = 40;
-                this.damage = 4 * scale; // Reduced from 8
-                this.contactDamage = 8 * scale; // Reduced from 20
+                this.damage = 4 * scale;
+                this.contactDamage = 5 * scale; // Further reduced
                 this.xpValue = 30;
                 break;
             case 'ranged':
@@ -970,8 +998,8 @@ class Enemy {
                 this.color = '#aa00ff';
                 this.maxHealth = 15 * scale;
                 this.speed = 60;
-                this.damage = 3 * scale; // Reduced from 8
-                this.contactDamage = 2 * scale; // Reduced from 5
+                this.damage = 3 * scale;
+                this.contactDamage = 1 * scale; // Further reduced
                 this.xpValue = 15;
                 this.fireRate = 1;
                 this.fireTimer = 0;
@@ -982,8 +1010,8 @@ class Enemy {
                 this.color = '#000000';
                 this.maxHealth = 500 * scale;
                 this.speed = 30;
-                this.damage = 8 * scale; // Reduced from 15
-                this.contactDamage = 15 * scale; // Reduced from 30
+                this.damage = 8 * scale;
+                this.contactDamage = 10 * scale; // Further reduced
                 this.xpValue = 200;
                 this.fireRate = 2;
                 this.fireTimer = 0;
