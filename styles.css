@@ -75,6 +75,28 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
     margin-top: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Scrollbar styling */
+.ability-grid::-webkit-scrollbar, .upgrade-grid::-webkit-scrollbar {
+    width: 10px;
+}
+
+.ability-grid::-webkit-scrollbar-track, .upgrade-grid::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 5px;
+}
+
+.ability-grid::-webkit-scrollbar-thumb, .upgrade-grid::-webkit-scrollbar-thumb {
+    background: #00ffff;
+    border-radius: 5px;
+}
+
+.ability-grid::-webkit-scrollbar-thumb:hover, .upgrade-grid::-webkit-scrollbar-thumb:hover {
+    background: #00cccc;
 }
 
 .ability-card, .upgrade-card {

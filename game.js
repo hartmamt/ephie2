@@ -1,4 +1,4 @@
-// Arena Shooter Game - v4.0.8
+// Arena Shooter Game - v4.0.9
 // MAJOR UPDATE: Risk of Rain Content + Boss Upgrades
 
 class Game {
@@ -349,6 +349,16 @@ class Game {
                     name: 'Void Fiend',
                     description: 'Fire a large purple energy beam dealing massive damage. Press SPACE/SHIFT.',
                     effect: () => new VoidFiendAbility(player, this)
+                },
+                {
+                    name: 'Railgunner',
+                    description: 'Shoot a narrow high-power beam at the enemy with the most health. Press SPACE/SHIFT.',
+                    effect: () => new RailgunnerAbility(player, this)
+                },
+                {
+                    name: 'Acrid',
+                    description: 'You are 30% larger and spit acid pools that damage enemies. Press SPACE/SHIFT.',
+                    effect: () => new AcridAbility(player, this)
                 }
             );
         }
@@ -1041,7 +1051,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('v4.0.8', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('v4.0.9', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -2985,7 +2995,7 @@ class PurpleMinion {
     }
 }
 
-// RISK OF RAIN ABILITIES - v4.0.8
+// RISK OF RAIN ABILITIES - v4.0.9
 
 class CommandoAbility {
     constructor(player, game) {
@@ -3419,6 +3429,285 @@ class VoidBeam {
         // Bright core
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.fillRect(0, -this.width / 4, this.length, this.width / 2);
+
+        ctx.restore();
+    }
+}
+
+class RailgunnerAbility {
+    constructor(player, game) {
+        this.name = 'Railgunner';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 4000;
+        this.timer = 0;
+        this.beamDuration = 800;
+        this.beamWidth = 15; // Narrow beam
+        this.beamLength = 600; // Long range
+        this.beamDamage = 250; // High damage
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Find enemy with most health
+            let target = null;
+            let maxHealth = 0;
+
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                if (enemy.health > maxHealth) {
+                    maxHealth = enemy.health;
+                    target = enemy;
+                }
+            });
+
+            let angle = 0;
+            if (target) {
+                angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            } else {
+                // Default to right if no enemies
+                angle = 0;
+            }
+
+            const beam = new RailgunBeam(
+                this.player.x, this.player.y, angle,
+                this.beamLength, this.beamWidth, this.beamDamage,
+                this.beamDuration, this.game
+            );
+            this.game.entities.push(beam);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#00ffff';
+        ctx.fillText(`RAILGUN: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class RailgunBeam {
+    constructor(x, y, angle, length, width, damage, duration, game) {
+        this.type = 'railgunBeam';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.length = length;
+        this.width = width;
+        this.damage = damage;
+        this.duration = duration;
+        this.timer = 0;
+        this.game = game;
+        this.alive = true;
+        this.hitEnemies = new Set();
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+            return;
+        }
+
+        // Damage enemies in beam
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            if (this.hitEnemies.has(enemy)) return;
+
+            // Check if enemy is in beam path
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > this.length) return;
+
+            const enemyAngle = Math.atan2(dy, dx);
+            let angleDiff = Math.abs(enemyAngle - this.angle);
+            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+            const maxAngleDiff = Math.atan(this.width / dist);
+
+            if (angleDiff < maxAngleDiff) {
+                enemy.takeDamage(this.damage);
+                this.hitEnemies.add(enemy);
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        // Draw beam
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        ctx.rotate(this.angle);
+
+        // Outer glow - cyan
+        ctx.fillStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+        ctx.fillRect(0, -this.width, this.length, this.width * 2);
+
+        // Inner beam - bright cyan
+        ctx.fillStyle = `rgba(100, 255, 255, ${alpha * 0.8})`;
+        ctx.fillRect(0, -this.width / 2, this.length, this.width);
+
+        // Bright core - white
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(0, -this.width / 4, this.length, this.width / 2);
+
+        ctx.restore();
+    }
+}
+
+class AcridAbility {
+    constructor(player, game) {
+        this.name = 'Acrid';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 3000;
+        this.timer = 0;
+        this.sizeMultiplier = 1.3; // 30% larger
+        this.acidDamage = 15;
+        this.acidDuration = 5000; // Acid pools last 5 seconds
+    }
+
+    apply() {
+        // Make player 30% larger
+        this.player.size *= this.sizeMultiplier;
+    }
+
+    use() {
+        if (this.timer <= 0) {
+            // Spit acid pool in front of player
+            // Find direction to nearest enemy or default direction
+            let angle = 0;
+            let target = null;
+            let nearestDist = Infinity;
+
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            if (target) {
+                angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            }
+
+            // Spawn acid pool 80px in front of player
+            const acidX = this.player.x + Math.cos(angle) * 80;
+            const acidY = this.player.y + Math.sin(angle) * 80;
+
+            const acidPool = new AcidPool(
+                acidX, acidY, this.acidDamage, this.acidDuration, this.game
+            );
+            this.game.entities.push(acidPool);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('normal');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#00ff00';
+        ctx.fillText(`ACID: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class AcidPool {
+    constructor(x, y, damage, duration, game) {
+        this.type = 'acidPool';
+        this.x = x;
+        this.y = y;
+        this.damage = damage;
+        this.duration = duration;
+        this.timer = 0;
+        this.game = game;
+        this.alive = true;
+        this.radius = 40;
+        this.damageInterval = 500; // Damage every 0.5 seconds
+        this.damageTimer = 0;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+            return;
+        }
+
+        // Damage enemies in pool
+        this.damageTimer += deltaTime;
+        if (this.damageTimer >= this.damageInterval) {
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < this.radius + enemy.size) {
+                    enemy.takeDamage(this.damage);
+                }
+            });
+            this.damageTimer = 0;
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        // Draw acid pool
+        ctx.save();
+
+        // Outer glow - green
+        ctx.fillStyle = `rgba(0, 255, 0, ${alpha * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main pool - toxic green
+        ctx.fillStyle = `rgba(50, 255, 50, ${alpha * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner pool - bright green
+        ctx.fillStyle = `rgba(100, 255, 100, ${alpha * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
     }
