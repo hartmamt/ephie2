@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arena Shooter - Armory v3.0.6</title>
+    <title>Arena Shooter - Armory v3.0.7</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -30,8 +30,18 @@
         <div id="game-over" class="modal hidden">
             <div class="modal-content">
                 <h2>Game Over!</h2>
-                <p>Survival Time: <span id="final-time">0:00</span></p>
-                <p>World Level Reached: <span id="final-level">1</span></p>
+                <p id="new-record" class="new-record hidden">🏆 NEW RECORD! 🏆</p>
+                <div class="stats-section">
+                    <h3>This Run</h3>
+                    <p>Survival Time: <span id="final-time">0:00</span></p>
+                    <p>World Level Reached: <span id="final-level">1</span></p>
+                </div>
+                <div class="stats-section">
+                    <h3>Personal Best</h3>
+                    <p>Best Time: <span id="best-time">0:00</span></p>
+                    <p>Best World Level: <span id="best-level">1</span></p>
+                    <p>Total Runs: <span id="total-runs">0</span></p>
+                </div>
                 <button onclick="location.reload()">Play Again</button>
             </div>
         </div>
@@ -40,7 +50,7 @@
         <div id="multiplayer-setup" class="modal hidden">
             <div class="modal-content">
                 <h2>Arena Shooter</h2>
-                <p class="version-number">Armory v3.0.6</p>
+                <p class="version-number">Armory v3.0.7</p>
 
                 <!-- Settings Section -->
                 <div class="settings-section">

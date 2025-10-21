@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v3.0.6
-// BOSS UPDATE: 3 unique boss types with special attacks
+// Arena Shooter Game - Armory v3.0.7
+// New: Highscores + Shooting bug fix
 
 class Game {
     constructor() {
@@ -57,6 +57,9 @@ class Game {
 
         // Player customization
         this.playerColor = '#00ffff'; // Default cyan
+
+        // Highscores - load from localStorage
+        this.loadHighscores();
 
         // Input
         this.keys = {};
@@ -163,6 +166,49 @@ class Game {
         this.backgroundImage = null;
         this.backgroundPattern = null;
         document.getElementById('bg-upload').value = '';
+    }
+
+    loadHighscores() {
+        const saved = localStorage.getItem('armoryHighscores');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.highscores = data;
+        } else {
+            // Initialize default highscores
+            this.highscores = {
+                bestTime: 0,
+                bestWorldLevel: 1,
+                totalRuns: 0
+            };
+        }
+    }
+
+    saveHighscores() {
+        localStorage.setItem('armoryHighscores', JSON.stringify(this.highscores));
+    }
+
+    updateHighscores() {
+        let updated = false;
+
+        // Update best time
+        if (this.survivalTime > this.highscores.bestTime) {
+            this.highscores.bestTime = this.survivalTime;
+            updated = true;
+        }
+
+        // Update best world level
+        if (this.worldLevel > this.highscores.bestWorldLevel) {
+            this.highscores.bestWorldLevel = this.worldLevel;
+            updated = true;
+        }
+
+        // Increment total runs
+        this.highscores.totalRuns++;
+
+        // Save if anything was updated
+        this.saveHighscores();
+
+        return updated;
     }
 
     showMenu() {
@@ -763,8 +809,25 @@ class Game {
         if (this.state === 'game-over') return; // Prevent multiple calls
 
         this.state = 'game-over';
+
+        // Update highscores
+        const newRecord = this.updateHighscores();
+
+        // Display stats
         document.getElementById('final-time').textContent = this.formatTime(this.survivalTime);
         document.getElementById('final-level').textContent = this.worldLevel;
+        document.getElementById('best-time').textContent = this.formatTime(this.highscores.bestTime);
+        document.getElementById('best-level').textContent = this.highscores.bestWorldLevel;
+        document.getElementById('total-runs').textContent = this.highscores.totalRuns;
+
+        // Show new record indicator if applicable
+        const newRecordEl = document.getElementById('new-record');
+        if (newRecord && newRecordEl) {
+            newRecordEl.classList.remove('hidden');
+        } else if (newRecordEl) {
+            newRecordEl.classList.add('hidden');
+        }
+
         document.getElementById('game-over').classList.remove('hidden');
     }
 
@@ -934,10 +997,18 @@ class Game {
             }
         });
 
+        // Highscore display - top right
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = '14px Arial';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(`Best Time: ${this.formatTime(this.highscores.bestTime)}`, this.canvas.width - padding, padding + 20);
+        this.ctx.fillText(`Best Level: ${this.highscores.bestWorldLevel}`, this.canvas.width - padding, padding + 40);
+        this.ctx.textAlign = 'left';
+
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v3.0.6', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v3.0.7', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -1088,6 +1159,9 @@ class Player {
         let nearestDist = Infinity;
 
         this.game.enemies.forEach(enemy => {
+            // Skip dead or invalid enemies
+            if (!enemy || !enemy.alive || enemy.health <= 0) return;
+
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);

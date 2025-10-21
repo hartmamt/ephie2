@@ -138,9 +138,42 @@ input[type="text"] {
     border-top: 1px solid #444;
 }
 
-#final-time, #final-level {
+#final-time, #final-level, #best-time, #best-level, #total-runs {
     color: #ffaa00;
     font-weight: bold;
+}
+
+.new-record {
+    color: #ffaa00;
+    font-size: 28px;
+    font-weight: bold;
+    margin: 20px 0;
+    text-shadow: 0 0 15px rgba(255, 170, 0, 0.8);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.stats-section {
+    background: #1a1a1a;
+    border: 2px solid #555;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+}
+
+.stats-section h3 {
+    color: #00ffff;
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+.stats-section p {
+    margin: 8px 0;
+    font-size: 16px;
 }
 
 .settings-section {
