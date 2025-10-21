@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v2.1.3
-// Update: New Explosive Ability + Better Controls!
+// Arena Shooter Game - Armory v2.1.4
+// Hotfix: Fixed weapon switching bug
 
 class Game {
     constructor() {
@@ -799,7 +799,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v2.1.3', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v2.1.4', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -912,6 +912,12 @@ class Player {
 
         // Auto-fire (using current weapon stats)
         this.fireTimer += deltaTime;
+
+        // Safety check: ensure currentWeapon exists
+        if (!this.currentWeapon) {
+            this.currentWeapon = this.weapons[0];
+        }
+
         const fireInterval = 1000 / this.currentWeapon.fireRate;
 
         if (this.fireTimer >= fireInterval) {
@@ -931,9 +937,16 @@ class Player {
     }
 
     fire() {
+        // Safety check: ensure currentWeapon exists
+        if (!this.currentWeapon) {
+            console.error('No weapon equipped! Resetting to default.');
+            this.currentWeapon = this.weapons[0];
+            return;
+        }
+
         // Find nearest enemy in range
         let target = null;
-        let nearestDist = Infinity; // Fixed: was this.range, which caused issues
+        let nearestDist = Infinity;
 
         this.game.enemies.forEach(enemy => {
             const dx = enemy.x - this.x;
@@ -949,11 +962,17 @@ class Player {
         // Only fire if target is within range
         if (target && nearestDist <= this.currentWeapon.range) {
             const angle = Math.atan2(target.y - this.y, target.x - this.x);
+
+            // Create projectile with current weapon stats
             const projectile = new Projectile(
                 this.x, this.y, angle, this.currentWeapon.damage, true, this.game,
                 this.homingShots, this.poisonBullets, target
             );
+
+            // Set projectile color to match weapon
             projectile.color = this.currentWeapon.color;
+
+            // Add to game projectiles array
             this.game.projectiles.push(projectile);
 
             // Play weapon sound effect!
@@ -970,10 +989,14 @@ class Player {
         this.fireRate = this.currentWeapon.fireRate;
         this.range = this.currentWeapon.range;
 
+        // CRITICAL FIX: Reset fire timer to allow immediate firing with new weapon
+        // This prevents the bug where switching weapons breaks shooting
+        this.fireTimer = 0;
+
         // Play weapon switch sound!
         this.game.soundSystem.playWeaponSwitch();
 
-        console.log(`Switched to ${this.currentWeapon.name} weapon!`);
+        console.log(`Switched to ${this.currentWeapon.name} weapon - Ready to fire!`);
     }
 
     takeDamage(amount) {
