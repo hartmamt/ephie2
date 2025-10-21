@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena Shooter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Ability Selection Screen -->
+        <div id="ability-selection" class="modal hidden">
+            <div class="modal-content">
+                <h2>Choose Your Starting Ability</h2>
+                <div id="ability-options" class="ability-grid"></div>
+            </div>
+        </div>
+
+        <!-- Upgrade Selection Screen -->
+        <div id="upgrade-selection" class="modal hidden">
+            <div class="modal-content">
+                <h2>Level Up! Choose an Upgrade</h2>
+                <div id="upgrade-options" class="upgrade-grid"></div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over" class="modal hidden">
+            <div class="modal-content">
+                <h2>Game Over!</h2>
+                <p>Survival Time: <span id="final-time">0:00</span></p>
+                <p>World Level Reached: <span id="final-level">1</span></p>
+                <button onclick="location.reload()">Play Again</button>
+            </div>
+        </div>
+
+        <!-- Multiplayer Setup -->
+        <div id="multiplayer-setup" class="modal hidden">
+            <div class="modal-content">
+                <h2>Multiplayer Setup</h2>
+                <button onclick="game.startSinglePlayer()">Single Player</button>
+                <button onclick="game.startLocalMultiplayer()">Local Multiplayer</button>
+                <div class="network-options">
+                    <h3>Network Multiplayer</h3>
+                    <button onclick="game.hostNetworkGame()">Host Game</button>
+                    <input type="text" id="room-code" placeholder="Room Code">
+                    <button onclick="game.joinNetworkGame()">Join Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
