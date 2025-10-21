@@ -20,8 +20,8 @@ body {
 }
 
 #gameCanvas {
-    background: #0a0a0a;
-    border: 2px solid #333;
+    background: #d0d0d0;
+    border: 2px solid #666;
     display: block;
 }
 

@@ -435,11 +435,12 @@ class Game {
             }
         });
 
-        // Enemies vs players
+        // Enemies vs players (contact damage)
         this.enemies.forEach(enemy => {
             this.players.forEach(player => {
                 if (player && this.circleCollision(enemy.x, enemy.y, enemy.size, player.x, player.y, player.size)) {
-                    player.takeDamage(enemy.contactDamage * (1000 / 60)); // Contact damage per frame
+                    // Apply damage per second, scaled by deltaTime
+                    player.takeDamage(enemy.contactDamage * (deltaTime / 1000));
                 }
             });
         });
@@ -597,8 +598,8 @@ class Game {
     }
 
     render() {
-        // Clear canvas
-        this.ctx.fillStyle = '#0a0a0a';
+        // Clear canvas with light gray background
+        this.ctx.fillStyle = '#d0d0d0';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         if (this.state === 'menu') return;
@@ -634,7 +635,7 @@ class Game {
     }
 
     drawGrid() {
-        this.ctx.strokeStyle = '#1a1a1a';
+        this.ctx.strokeStyle = '#aaaaaa';
         this.ctx.lineWidth = 1;
 
         const gridSize = 50;
@@ -662,7 +663,7 @@ class Game {
         const barWidth = 200;
 
         this.ctx.font = '18px Arial';
-        this.ctx.fillStyle = '#fff';
+        this.ctx.fillStyle = '#000';
 
         // World Level
         this.ctx.fillText(`World Level: ${this.worldLevel}`, padding, padding + 20);
@@ -672,14 +673,14 @@ class Game {
 
         // XP Bar
         const xpPercent = this.xp / this.xpToLevel;
-        this.ctx.fillStyle = '#333';
+        this.ctx.fillStyle = '#888';
         this.ctx.fillRect(padding, padding + 60, barWidth, barHeight);
         this.ctx.fillStyle = '#ffaa00';
         this.ctx.fillRect(padding, padding + 60, barWidth * xpPercent, barHeight);
-        this.ctx.strokeStyle = '#fff';
+        this.ctx.strokeStyle = '#000';
         this.ctx.strokeRect(padding, padding + 60, barWidth, barHeight);
 
-        this.ctx.fillStyle = '#fff';
+        this.ctx.fillStyle = '#000';
         this.ctx.font = '14px Arial';
         this.ctx.fillText(`Level ${this.level}`, padding + barWidth / 2 - 25, padding + 75);
 
@@ -689,15 +690,15 @@ class Game {
             if (player) {
                 const healthPercent = player.health / player.maxHealth;
 
-                this.ctx.fillStyle = player.color;
+                this.ctx.fillStyle = '#000';
                 this.ctx.font = '16px Arial';
                 this.ctx.fillText(`P${index + 1}`, padding, yOffset);
 
-                this.ctx.fillStyle = '#333';
+                this.ctx.fillStyle = '#888';
                 this.ctx.fillRect(padding + 30, yOffset - 15, barWidth, barHeight);
                 this.ctx.fillStyle = player.color;
                 this.ctx.fillRect(padding + 30, yOffset - 15, barWidth * healthPercent, barHeight);
-                this.ctx.strokeStyle = '#fff';
+                this.ctx.strokeStyle = '#000';
                 this.ctx.strokeRect(padding + 30, yOffset - 15, barWidth, barHeight);
 
                 // Shield bar
@@ -728,8 +729,8 @@ class Player {
         this.health = 100;
         this.speed = 200;
         this.damage = 10;
-        this.fireRate = 3; // shots per second
-        this.range = 250;
+        this.fireRate = 5; // shots per second (increased from 3)
+        this.range = 350; // increased range so enemies are easier to hit
         this.homingShots = false;
         this.poisonBullets = false;
 
@@ -893,8 +894,8 @@ class Enemy {
                 this.color = '#ff0000';
                 this.maxHealth = 20 * scale;
                 this.speed = 80;
-                this.damage = 5 * scale;
-                this.contactDamage = 10 * scale;
+                this.damage = 2 * scale; // Reduced from 5
+                this.contactDamage = 3 * scale; // Reduced from 10
                 this.xpValue = 10;
                 break;
             case 'fast':
@@ -902,8 +903,8 @@ class Enemy {
                 this.color = '#0044ff';
                 this.maxHealth = 10 * scale;
                 this.speed = 150;
-                this.damage = 3 * scale;
-                this.contactDamage = 5 * scale;
+                this.damage = 1.5 * scale; // Reduced from 3
+                this.contactDamage = 2 * scale; // Reduced from 5
                 this.xpValue = 8;
                 break;
             case 'tank':
@@ -911,8 +912,8 @@ class Enemy {
                 this.color = '#00ff00';
                 this.maxHealth = 80 * scale;
                 this.speed = 40;
-                this.damage = 8 * scale;
-                this.contactDamage = 20 * scale;
+                this.damage = 4 * scale; // Reduced from 8
+                this.contactDamage = 8 * scale; // Reduced from 20
                 this.xpValue = 30;
                 break;
             case 'ranged':
@@ -920,8 +921,8 @@ class Enemy {
                 this.color = '#aa00ff';
                 this.maxHealth = 15 * scale;
                 this.speed = 60;
-                this.damage = 8 * scale;
-                this.contactDamage = 5 * scale;
+                this.damage = 3 * scale; // Reduced from 8
+                this.contactDamage = 2 * scale; // Reduced from 5
                 this.xpValue = 15;
                 this.fireRate = 1;
                 this.fireTimer = 0;
@@ -932,8 +933,8 @@ class Enemy {
                 this.color = '#000000';
                 this.maxHealth = 500 * scale;
                 this.speed = 30;
-                this.damage = 15 * scale;
-                this.contactDamage = 30 * scale;
+                this.damage = 8 * scale; // Reduced from 15
+                this.contactDamage = 15 * scale; // Reduced from 30
                 this.xpValue = 200;
                 this.fireRate = 2;
                 this.fireTimer = 0;
@@ -1065,12 +1066,17 @@ class Enemy {
         const barX = screenX - barWidth / 2;
         const barY = screenY - this.size - 10;
 
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = '#666';
         ctx.fillRect(barX, barY, barWidth, barHeight);
 
         const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = '#00ff00';
+        ctx.fillStyle = '#ff0000';
         ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // Border for health bar
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
 
         // Poison indicator
         if (this.poisonStacks > 0) {
