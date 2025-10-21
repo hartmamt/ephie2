@@ -1,9 +1,13 @@
-// Arena Shooter Game - Main Game Engine
+// Arena Shooter Game - Armory v2.0.3
+// Major Update: Weapon System + Sound Effects!
 
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+
+        // Sound system
+        this.soundSystem = new SoundSystem();
 
         // Set canvas size
         this.canvas.width = 1200;
@@ -70,8 +74,16 @@ class Game {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
 
-            // Special abilities
-            if (e.key.toLowerCase() === 'q' && this.players[0]) {
+            // Weapon cycling - Q for P1, / for P2
+            if (e.key.toLowerCase() === 'q' && this.players[0] && !e.repeat) {
+                this.players[0].cycleWeapon();
+            }
+            if (e.key === '/' && this.players[1] && !e.repeat) {
+                this.players[1].cycleWeapon();
+            }
+
+            // Special abilities - E for P1
+            if (e.key.toLowerCase() === 'e' && this.players[0]) {
                 this.players[0].useAbility();
             }
             if (e.key === ' ' && this.players[0] && this.players[0].ability?.name === 'Dash') {
@@ -105,8 +117,15 @@ class Game {
     startLocalMultiplayer() {
         this.multiplayerMode = 'local';
         document.getElementById('multiplayer-setup').classList.add('hidden');
-        this.initPlayer(0);
-        setTimeout(() => this.initPlayer(1), 100);
+
+        // Create both players first
+        const p1 = new Player(this.canvas.width / 2 - 50, this.canvas.height / 2, 0, this);
+        const p2 = new Player(this.canvas.width / 2 + 50, this.canvas.height / 2, 1, this);
+        this.players[0] = p1;
+        this.players[1] = p2;
+
+        // Start with Player 1's ability selection
+        this.showAbilitySelection(0);
     }
 
     hostNetworkGame() {
@@ -143,6 +162,10 @@ class Game {
         const player = this.players[playerIndex];
         const modal = document.getElementById('ability-selection');
         const optionsContainer = document.getElementById('ability-options');
+        const header = modal.querySelector('h2');
+
+        // Update header to show which player is selecting
+        header.textContent = `Player ${playerIndex + 1}: Choose Your Starting Ability`;
 
         optionsContainer.innerHTML = '';
 
@@ -196,8 +219,15 @@ class Game {
                 player.ability.apply();
                 modal.classList.add('hidden');
 
-                // If both players need to select abilities, wait for the other
-                if (this.players.length === 2 && this.players.some(p => p && !p.ability)) {
+                // Check if there's another player that needs to select
+                const otherPlayerIndex = playerIndex === 0 ? 1 : 0;
+                const otherPlayer = this.players[otherPlayerIndex];
+
+                if (otherPlayer && !otherPlayer.ability) {
+                    // Show ability selection for the other player
+                    setTimeout(() => {
+                        this.showAbilitySelection(otherPlayerIndex);
+                    }, 100);
                     return;
                 }
 
@@ -262,10 +292,12 @@ class Game {
                     if (dist < this.pickupRange) {
                         if (orb.type === 'xp') {
                             this.xp += orb.value * this.xpGainMultiplier;
+                            this.soundSystem.playOrbPickup('xp');
                         } else if (orb.type === 'heal') {
                             this.players.forEach(p => {
                                 if (p) p.heal(orb.value);
                             });
+                            this.soundSystem.playOrbPickup('heal');
                         }
                         return false;
                     }
@@ -539,6 +571,7 @@ class Game {
         this.level++;
         this.xp -= this.xpToLevel;
         this.xpToLevel = Math.floor(this.xpToLevel * 1.5);
+        this.soundSystem.playLevelUp();
         this.showUpgradeSelection();
     }
 
@@ -756,9 +789,19 @@ class Game {
                     this.ctx.fillRect(padding + 30, yOffset - 15, barWidth * shieldPercent, barHeight);
                 }
 
-                yOffset += 30;
+                // Weapon indicator - NEW in v2.0.3!
+                this.ctx.fillStyle = player.currentWeapon.color;
+                this.ctx.font = '14px Arial';
+                this.ctx.fillText(`Weapon: ${player.currentWeapon.name}`, padding + 30, yOffset + 10);
+
+                yOffset += 45; // Increased spacing for weapon display
             }
         });
+
+        // Version display
+        this.ctx.fillStyle = '#00000040';
+        this.ctx.font = '12px Arial';
+        this.ctx.fillText('Armory v2.0.3', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -776,11 +819,43 @@ class Player {
         this.maxHealth = 150; // Increased from 100
         this.health = 150;
         this.speed = 200;
-        this.damage = 10;
-        this.fireRate = 8; // shots per second (increased from 5)
-        this.range = 500; // increased range significantly
         this.homingShots = false;
         this.poisonBullets = false;
+
+        // Weapon System - NEW in v2.0.3!
+        this.weapons = [
+            {
+                name: 'Light',
+                damage: 8,
+                fireRate: 12, // Fast shooting
+                range: 500,
+                color: '#ffff00',
+                type: 'light'
+            },
+            {
+                name: 'Medium',
+                damage: 15,
+                fireRate: 6, // Medium
+                range: 500,
+                color: '#ff8800',
+                type: 'medium'
+            },
+            {
+                name: 'Heavy',
+                damage: 35,
+                fireRate: 2, // Slow but powerful
+                range: 500,
+                color: '#ff0000',
+                type: 'heavy'
+            }
+        ];
+        this.currentWeaponIndex = 0;
+        this.currentWeapon = this.weapons[0];
+
+        // Legacy properties (for compatibility)
+        this.damage = this.currentWeapon.damage;
+        this.fireRate = this.currentWeapon.fireRate;
+        this.range = this.currentWeapon.range;
 
         // Damage feedback
         this.damageFlash = 0;
@@ -837,9 +912,9 @@ class Player {
 
         // No bounds in infinite world!
 
-        // Auto-fire
+        // Auto-fire (using current weapon stats)
         this.fireTimer += deltaTime;
-        const fireInterval = 1000 / this.fireRate;
+        const fireInterval = 1000 / this.currentWeapon.fireRate;
 
         if (this.fireTimer >= fireInterval) {
             this.fire();
@@ -874,20 +949,39 @@ class Player {
         });
 
         // Only fire if target is within range
-        if (target && nearestDist <= this.range) {
+        if (target && nearestDist <= this.currentWeapon.range) {
             const angle = Math.atan2(target.y - this.y, target.x - this.x);
             const projectile = new Projectile(
-                this.x, this.y, angle, this.damage, true, this.game,
+                this.x, this.y, angle, this.currentWeapon.damage, true, this.game,
                 this.homingShots, this.poisonBullets, target
             );
-            projectile.color = this.color;
+            projectile.color = this.currentWeapon.color;
             this.game.projectiles.push(projectile);
+
+            // Play weapon sound effect!
+            this.game.soundSystem.playShoot(this.currentWeapon.type);
         }
+    }
+
+    cycleWeapon() {
+        this.currentWeaponIndex = (this.currentWeaponIndex + 1) % this.weapons.length;
+        this.currentWeapon = this.weapons[this.currentWeaponIndex];
+
+        // Update legacy properties
+        this.damage = this.currentWeapon.damage;
+        this.fireRate = this.currentWeapon.fireRate;
+        this.range = this.currentWeapon.range;
+
+        // Play weapon switch sound!
+        this.game.soundSystem.playWeaponSwitch();
+
+        console.log(`Switched to ${this.currentWeapon.name} weapon!`);
     }
 
     takeDamage(amount) {
         if (amount > 0) {
             this.damageFlash = 200; // Flash for 200ms
+            this.game.soundSystem.playHit();
         }
 
         if (this.shield > 0) {
@@ -1123,6 +1217,7 @@ class Enemy {
 
     die() {
         this.alive = false;
+        this.game.soundSystem.playEnemyDeath();
 
         // Drop orbs
         const xpOrbs = Math.floor(this.xpValue / 5);
