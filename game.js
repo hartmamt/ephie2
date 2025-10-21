@@ -214,8 +214,11 @@ class Game {
     start() {
         this.lastTime = performance.now();
 
+        // Initialize camera to player position first
+        this.updateCamera();
+
         // Spawn initial enemies so player has something to shoot immediately
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 8; i++) {
             this.spawnEnemy();
         }
 
@@ -286,9 +289,10 @@ class Game {
         });
 
         // Update enemies
-        this.enemies.forEach(enemy => {
+        this.enemies = this.enemies.filter(enemy => {
             const target = this.getNearestPlayer(enemy.x, enemy.y);
             enemy.update(deltaTime, target);
+            return enemy.alive;
         });
 
         // Update projectiles
@@ -358,8 +362,8 @@ class Game {
             avgX /= count;
             avgY /= count;
 
-            // Smooth camera movement
-            const smoothing = 0.1;
+            // Smooth camera movement (unless it's the first update)
+            const smoothing = (this.cameraX === 0 && this.cameraY === 0) ? 1.0 : 0.1;
             this.cameraX += (avgX - this.canvas.width / 2 - this.cameraX) * smoothing;
             this.cameraY += (avgY - this.canvas.height / 2 - this.cameraY) * smoothing;
         }
@@ -385,32 +389,38 @@ class Game {
         const types = ['basic', 'basic', 'fast', 'tank', 'ranged'];
         const type = types[Math.floor(Math.random() * types.length)];
 
-        // Spawn off-screen in world coordinates
+        // Get player position for reference
+        const player = this.players.find(p => p && p.health > 0);
+        if (!player) return;
+
+        // Spawn around player position (not camera, for more reliable spawning)
         const side = Math.floor(Math.random() * 4);
         let x, y;
 
-        const spawnMargin = 100;
+        const spawnDistance = 200; // Distance from player
 
         switch(side) {
             case 0: // top
-                x = this.cameraX + Math.random() * this.canvas.width;
-                y = this.cameraY - spawnMargin;
+                x = player.x + (Math.random() - 0.5) * 400;
+                y = player.y - spawnDistance;
                 break;
             case 1: // right
-                x = this.cameraX + this.canvas.width + spawnMargin;
-                y = this.cameraY + Math.random() * this.canvas.height;
+                x = player.x + spawnDistance;
+                y = player.y + (Math.random() - 0.5) * 400;
                 break;
             case 2: // bottom
-                x = this.cameraX + Math.random() * this.canvas.width;
-                y = this.cameraY + this.canvas.height + spawnMargin;
+                x = player.x + (Math.random() - 0.5) * 400;
+                y = player.y + spawnDistance;
                 break;
             case 3: // left
-                x = this.cameraX - spawnMargin;
-                y = this.cameraY + Math.random() * this.canvas.height;
+                x = player.x - spawnDistance;
+                y = player.y + (Math.random() - 0.5) * 400;
                 break;
         }
 
-        this.enemies.push(new Enemy(x, y, type, this));
+        const enemy = new Enemy(x, y, type, this);
+        this.enemies.push(enemy);
+        console.log(`Spawned ${type} enemy at (${Math.round(x)}, ${Math.round(y)}). Total enemies: ${this.enemies.length}`);
     }
 
     spawnBoss() {
