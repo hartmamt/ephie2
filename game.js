@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v3.0.7
-// New: Highscores + Shooting bug fix
+// Arena Shooter Game - Armory v3.0.8
+// Hotfix: Enemy contact freeze bug
 
 class Game {
     constructor() {
@@ -497,7 +497,7 @@ class Game {
         }
 
         // Collision detection
-        this.checkCollisions();
+        this.checkCollisions(deltaTime);
 
         // Check game over
         if (this.players.every(p => !p || p.health <= 0)) {
@@ -607,7 +607,7 @@ class Game {
         this.currentBossType = (this.currentBossType + 1) % this.bossTypes.length;
     }
 
-    checkCollisions() {
+    checkCollisions(deltaTime) {
         // Player projectiles vs enemies
         this.projectiles.forEach(proj => {
             if (proj.friendly) {
@@ -1008,7 +1008,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v3.0.7', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v3.0.8', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
