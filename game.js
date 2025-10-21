@@ -1,4 +1,4 @@
-// Arena Shooter Game - v4.0.9
+// Arena Shooter Game - v4.1.0
 // MAJOR UPDATE: Risk of Rain Content + Boss Upgrades
 
 class Game {
@@ -20,6 +20,7 @@ class Game {
         this.projectiles = [];
         this.orbs = [];
         this.entities = []; // Turrets, drones, etc.
+        this.walls = []; // Obstacle walls
 
         // World & Camera
         this.worldX = 0;
@@ -112,16 +113,21 @@ class Game {
     }
 
     setupSettings() {
+        // Load saved settings
+        this.loadSettings();
+
         // Sound toggle
         const soundToggle = document.getElementById('sound-toggle');
         soundToggle.addEventListener('change', (e) => {
             this.soundSystem.setEnabled(e.target.checked);
+            this.saveSettings();
         });
 
         // Risk of Rain content toggle
         const rorToggle = document.getElementById('ror-toggle');
         rorToggle.addEventListener('change', (e) => {
             this.riskOfRainContent = e.target.checked;
+            this.saveSettings();
         });
 
         // Player color picker
@@ -131,6 +137,7 @@ class Game {
         colorPicker.addEventListener('input', (e) => {
             this.playerColor = e.target.value;
             colorInput.value = e.target.value;
+            this.saveSettings();
         });
 
         colorInput.addEventListener('input', (e) => {
@@ -146,6 +153,7 @@ class Game {
             if (/^#[0-9A-Fa-f]{6}$/.test(value) || /^#[0-9A-Fa-f]{3}$/.test(value)) {
                 this.playerColor = value;
                 colorPicker.value = value;
+                this.saveSettings();
             }
         });
 
@@ -173,6 +181,36 @@ class Game {
         this.backgroundImage = null;
         this.backgroundPattern = null;
         document.getElementById('bg-upload').value = '';
+    }
+
+    loadSettings() {
+        const saved = localStorage.getItem('armorySettings');
+        if (saved) {
+            const data = JSON.parse(saved);
+            // Apply saved settings
+            if (data.playerColor) {
+                this.playerColor = data.playerColor;
+                document.getElementById('player-color').value = data.playerColor;
+                document.getElementById('color-input').value = data.playerColor;
+            }
+            if (data.riskOfRainContent !== undefined) {
+                this.riskOfRainContent = data.riskOfRainContent;
+                document.getElementById('ror-toggle').checked = data.riskOfRainContent;
+            }
+            if (data.soundEnabled !== undefined) {
+                this.soundSystem.setEnabled(data.soundEnabled);
+                document.getElementById('sound-toggle').checked = data.soundEnabled;
+            }
+        }
+    }
+
+    saveSettings() {
+        const settings = {
+            playerColor: this.playerColor,
+            riskOfRainContent: this.riskOfRainContent,
+            soundEnabled: this.soundSystem.enabled
+        };
+        localStorage.setItem('armorySettings', JSON.stringify(settings));
     }
 
     loadHighscores() {
@@ -359,6 +397,51 @@ class Game {
                     name: 'Acrid',
                     description: 'You are 30% larger and spit acid pools that damage enemies. Press SPACE/SHIFT.',
                     effect: () => new AcridAbility(player, this)
+                },
+                {
+                    name: 'Loader',
+                    description: 'Create short electric lines to all nearby enemies for 3 seconds. Press SPACE/SHIFT.',
+                    effect: () => new LoaderAbility(player, this)
+                },
+                {
+                    name: 'Bandit',
+                    description: 'Shoot a high damage piercing projectile with infinite range. Press SPACE/SHIFT.',
+                    effect: () => new BanditAbility(player, this)
+                },
+                {
+                    name: 'REX',
+                    description: 'Heal a small amount on every hit. Passive ability.',
+                    effect: () => new REXAbility(player, this)
+                },
+                {
+                    name: 'Chef',
+                    description: 'Throw smoldering boomerang knives that come back. Press SPACE/SHIFT.',
+                    effect: () => new ChefAbility(player, this)
+                },
+                {
+                    name: 'False Son',
+                    description: 'Ground pound attack that damages all nearby enemies. Press SPACE/SHIFT.',
+                    effect: () => new FalseSonAbility(player, this)
+                },
+                {
+                    name: 'Drifter',
+                    description: 'Activate 6 temporary buffs for 7 seconds (damage + attack speed). Press SPACE/SHIFT.',
+                    effect: () => new DrifterAbility(player, this)
+                },
+                {
+                    name: 'Engineer',
+                    description: 'Shoot mines on the ground that explode when enemies get near. Press SPACE/SHIFT.',
+                    effect: () => new EngineerAbility(player, this)
+                },
+                {
+                    name: 'Huntress',
+                    description: 'Teleport a medium distance toward your cursor direction. Press SPACE/SHIFT.',
+                    effect: () => new HuntressAbility(player, this)
+                },
+                {
+                    name: 'Artificer',
+                    description: 'Create a wall of flames that damages enemies passing through. Press SPACE/SHIFT.',
+                    effect: () => new ArtificerAbility(player, this)
                 }
             );
         }
@@ -402,6 +485,11 @@ class Game {
 
         // Initialize camera to player position first
         this.updateCamera();
+
+        // Spawn initial walls
+        for (let i = 0; i < 15; i++) {
+            this.spawnWall();
+        }
 
         // Spawn initial enemies so player has something to shoot immediately
         for (let i = 0; i < 8; i++) {
@@ -650,6 +738,26 @@ class Game {
         this.currentBossType = (this.currentBossType + 1) % this.bossTypes.length;
     }
 
+    spawnWall() {
+        // Random position in world
+        const player = this.players.find(p => p && p.health > 0);
+        if (!player) return;
+
+        // Spawn walls around the play area, not too close to player
+        const minDistance = 300;
+        const maxDistance = 800;
+        const angle = Math.random() * Math.PI * 2;
+        const distance = minDistance + Math.random() * (maxDistance - minDistance);
+
+        const x = player.x + Math.cos(angle) * distance;
+        const y = player.y + Math.sin(angle) * distance;
+
+        // Random orientation (horizontal or vertical)
+        const isHorizontal = Math.random() < 0.5;
+        const wall = new Wall(x, y, isHorizontal);
+        this.walls.push(wall);
+    }
+
     checkCollisions(deltaTime) {
         // Player projectiles vs enemies
         this.projectiles.forEach(proj => {
@@ -658,6 +766,13 @@ class Game {
                     if (this.circleCollision(proj.x, proj.y, proj.radius, enemy.x, enemy.y, enemy.size)) {
                         enemy.takeDamage(proj.damage, proj);
                         if (!proj.piercing) proj.alive = false;
+
+                        // REX ability: heal on hit
+                        this.players.forEach(player => {
+                            if (player && player.rexHealing) {
+                                player.heal(player.rexHealAmount);
+                            }
+                        });
                     }
                 });
             }
@@ -718,6 +833,41 @@ class Game {
                     }
                 });
             }
+        });
+
+        // Projectiles vs walls
+        this.projectiles.forEach(proj => {
+            this.walls.forEach(wall => {
+                if (wall.checkCollision(proj.x, proj.y, proj.radius)) {
+                    proj.alive = false;
+                }
+            });
+        });
+
+        // Players vs walls
+        this.players.forEach(player => {
+            if (!player) return;
+            this.walls.forEach(wall => {
+                if (wall.checkCollision(player.x, player.y, player.size)) {
+                    // Push player out of wall
+                    const pushOut = wall.getPushOut(player.x, player.y, player.size);
+                    player.x += pushOut.x;
+                    player.y += pushOut.y;
+                }
+            });
+        });
+
+        // Enemies vs walls
+        this.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            this.walls.forEach(wall => {
+                if (wall.checkCollision(enemy.x, enemy.y, enemy.size)) {
+                    // Push enemy out of wall
+                    const pushOut = wall.getPushOut(enemy.x, enemy.y, enemy.size);
+                    enemy.x += pushOut.x;
+                    enemy.y += pushOut.y;
+                }
+            });
         });
     }
 
@@ -909,6 +1059,9 @@ class Game {
         // Draw grid
         this.drawGrid();
 
+        // Draw walls
+        this.walls.forEach(wall => wall.render(this.ctx, this));
+
         // Draw orbs
         this.orbs.forEach(orb => orb.render(this.ctx, this));
 
@@ -1051,7 +1204,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('v4.0.9', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('v4.1.0', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -2995,7 +3148,7 @@ class PurpleMinion {
     }
 }
 
-// RISK OF RAIN ABILITIES - v4.0.9
+// RISK OF RAIN ABILITIES - v4.1.0
 
 class CommandoAbility {
     constructor(player, game) {
@@ -3709,6 +3862,990 @@ class AcidPool {
         ctx.arc(screenX, screenY, this.radius * 0.7, 0, Math.PI * 2);
         ctx.fill();
 
+        ctx.restore();
+    }
+}
+
+class LoaderAbility {
+    constructor(player, game) {
+        this.name = 'Loader';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 8000;
+        this.timer = 0;
+        this.duration = 3000;
+        this.range = 250;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Find all enemies within range
+            const targets = [];
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.range) {
+                    targets.push(enemy);
+                }
+            });
+
+            // Create lines to all nearby enemies
+            targets.forEach(target => {
+                const line = new LoaderLine(
+                    this.player, target, this.duration, this.game
+                );
+                this.game.entities.push(line);
+            });
+
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#ffff00';
+        ctx.fillText(`LOADER: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class LoaderLine {
+    constructor(player, target, duration, game) {
+        this.type = 'loaderLine';
+        this.player = player;
+        this.target = target;
+        this.duration = duration;
+        this.timer = 0;
+        this.game = game;
+        this.alive = true;
+        this.damage = 8;
+        this.damageInterval = 200; // Damage every 0.2 seconds
+        this.damageTimer = 0;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration || !this.target.alive) {
+            this.alive = false;
+            return;
+        }
+
+        // Damage target periodically
+        this.damageTimer += deltaTime;
+        if (this.damageTimer >= this.damageInterval) {
+            this.target.takeDamage(this.damage);
+            this.damageTimer = 0;
+        }
+    }
+
+    render(ctx, game) {
+        if (!this.target.alive) return;
+
+        const screenX1 = game.toScreenX(this.player.x);
+        const screenY1 = game.toScreenY(this.player.y);
+        const screenX2 = game.toScreenX(this.target.x);
+        const screenY2 = game.toScreenY(this.target.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 0, ${alpha * 0.8})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(screenX1, screenY1);
+        ctx.lineTo(screenX2, screenY2);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+class BanditAbility {
+    constructor(player, game) {
+        this.name = 'Bandit';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 3000;
+        this.timer = 0;
+        this.damage = 150;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Find nearest enemy for direction
+            let angle = 0;
+            let target = null;
+            let nearestDist = Infinity;
+
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            if (target) {
+                angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            }
+
+            const projectile = new BanditProjectile(
+                this.player.x, this.player.y, angle, this.damage, this.game
+            );
+            this.game.entities.push(projectile);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#ff8800';
+        ctx.fillText(`BANDIT: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class BanditProjectile {
+    constructor(x, y, angle, damage, game) {
+        this.type = 'banditProjectile';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.damage = damage;
+        this.game = game;
+        this.speed = 600;
+        this.alive = true;
+        this.size = 8;
+        this.lifetime = 5000; // 5 seconds max
+        this.timer = 0;
+        this.hitEnemies = new Set();
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+        if (this.timer >= this.lifetime) {
+            this.alive = false;
+            return;
+        }
+
+        // Move
+        this.x += Math.cos(this.angle) * this.speed * (deltaTime / 1000);
+        this.y += Math.sin(this.angle) * this.speed * (deltaTime / 1000);
+
+        // Check collisions with enemies (piercing)
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            if (this.hitEnemies.has(enemy)) return;
+
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < enemy.size + this.size) {
+                enemy.takeDamage(this.damage);
+                this.hitEnemies.add(enemy);
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        ctx.save();
+        ctx.fillStyle = '#ff8800';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add glow
+        ctx.strokeStyle = '#ffaa00';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+class REXAbility {
+    constructor(player, game) {
+        this.name = 'REX';
+        this.player = player;
+        this.game = game;
+        this.healPerHit = 0.5;
+    }
+
+    apply() {
+        // Hook into player's projectile hit system
+        this.player.rexHealing = true;
+        this.player.rexHealAmount = this.healPerHit;
+    }
+
+    use() {}
+
+    update(deltaTime) {}
+
+    renderIndicator(ctx, x, y) {
+        ctx.fillStyle = '#00ff88';
+        ctx.fillText('REX: Heal on Hit Active', x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class ChefAbility {
+    constructor(player, game) {
+        this.name = 'Chef';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 2000;
+        this.timer = 0;
+        this.damage = 40;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Find nearest enemy for direction
+            let angle = 0;
+            let target = null;
+            let nearestDist = Infinity;
+
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            if (target) {
+                angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            }
+
+            const knife = new BoomerangKnife(
+                this.player.x, this.player.y, angle, this.damage, this.player, this.game
+            );
+            this.game.entities.push(knife);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('normal');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#ff6600';
+        ctx.fillText(`CHEF: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class BoomerangKnife {
+    constructor(x, y, angle, damage, owner, game) {
+        this.type = 'boomerangKnife';
+        this.x = x;
+        this.y = y;
+        this.startX = x;
+        this.startY = y;
+        this.angle = angle;
+        this.damage = damage;
+        this.owner = owner;
+        this.game = game;
+        this.speed = 400;
+        this.alive = true;
+        this.size = 6;
+        this.maxDistance = 200;
+        this.returning = false;
+        this.hitEnemies = new Set();
+        this.distanceTraveled = 0;
+    }
+
+    update(deltaTime) {
+        const moveAmount = this.speed * (deltaTime / 1000);
+
+        if (!this.returning) {
+            // Move outward
+            this.x += Math.cos(this.angle) * moveAmount;
+            this.y += Math.sin(this.angle) * moveAmount;
+            this.distanceTraveled += moveAmount;
+
+            if (this.distanceTraveled >= this.maxDistance) {
+                this.returning = true;
+                this.hitEnemies.clear(); // Can hit enemies again on return
+            }
+        } else {
+            // Return to owner
+            const dx = this.owner.x - this.x;
+            const dy = this.owner.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 10) {
+                this.alive = false;
+                return;
+            }
+
+            this.x += (dx / dist) * moveAmount;
+            this.y += (dy / dist) * moveAmount;
+        }
+
+        // Check collisions with enemies
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            if (this.hitEnemies.has(enemy)) return;
+
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < enemy.size + this.size) {
+                enemy.takeDamage(this.damage);
+                this.hitEnemies.add(enemy);
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        ctx.save();
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Smoldering effect
+        ctx.fillStyle = '#ff3300';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.size * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class FalseSonAbility {
+    constructor(player, game) {
+        this.name = 'False Son';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 6000;
+        this.timer = 0;
+        this.damage = 100;
+        this.range = 150;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            const pound = new GroundPound(
+                this.player.x, this.player.y, this.damage, this.range, this.game
+            );
+            this.game.entities.push(pound);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#8800ff';
+        ctx.fillText(`POUND: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class GroundPound {
+    constructor(x, y, damage, range, game) {
+        this.type = 'groundPound';
+        this.x = x;
+        this.y = y;
+        this.damage = damage;
+        this.range = range;
+        this.game = game;
+        this.alive = true;
+        this.duration = 500;
+        this.timer = 0;
+        this.hasHit = false;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+            return;
+        }
+
+        if (!this.hasHit) {
+            // Damage all enemies in range
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < this.range) {
+                    enemy.takeDamage(this.damage);
+                }
+            });
+            this.hasHit = true;
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const progress = this.timer / this.duration;
+        const currentRadius = this.range * progress;
+        const alpha = 1 - progress;
+
+        ctx.save();
+
+        // Shockwave ring
+        ctx.strokeStyle = `rgba(136, 0, 255, ${alpha * 0.8})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, currentRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner fill
+        ctx.fillStyle = `rgba(136, 0, 255, ${alpha * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, currentRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class DrifterAbility {
+    constructor(player, game) {
+        this.name = 'Drifter';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 15000;
+        this.timer = 0;
+        this.buffDuration = 7000;
+        this.buffTimer = 0;
+        this.damageMultiplier = 1.6; // 60% damage boost
+        this.attackSpeedMultiplier = 1.6; // 60% attack speed boost
+        this.originalDamage = null;
+        this.originalFireRate = null;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            this.buffTimer = this.buffDuration;
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+
+        if (this.buffTimer > 0) {
+            this.buffTimer -= deltaTime;
+
+            // Apply buffs
+            if (!this.originalDamage) {
+                this.originalDamage = this.player.currentWeapon.damage;
+                this.originalFireRate = this.player.fireRate;
+            }
+            this.player.currentWeapon.damage = this.originalDamage * this.damageMultiplier;
+            this.player.fireRate = this.originalFireRate * this.attackSpeedMultiplier;
+        } else if (this.originalDamage) {
+            // Remove buffs
+            this.player.currentWeapon.damage = this.originalDamage;
+            this.player.fireRate = this.originalFireRate;
+            this.originalDamage = null;
+            this.originalFireRate = null;
+        }
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        const buffActive = this.buffTimer > 0;
+
+        if (buffActive) {
+            ctx.fillStyle = '#00ffff';
+            ctx.fillText(`DRIFTER: BUFFED! ${(this.buffTimer / 1000).toFixed(1)}s`, x, y);
+        } else {
+            ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#00ff00';
+            ctx.fillText(`DRIFTER: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+        }
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class EngineerAbility {
+    constructor(player, game) {
+        this.name = 'Engineer';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 1500;
+        this.timer = 0;
+        this.damage = 80;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Place mine at player position
+            const mine = new Mine(
+                this.player.x, this.player.y, this.damage, this.game
+            );
+            this.game.entities.push(mine);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('normal');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#ffaa00';
+        ctx.fillText(`ENGINEER: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class Mine {
+    constructor(x, y, damage, game) {
+        this.type = 'mine';
+        this.x = x;
+        this.y = y;
+        this.damage = damage;
+        this.game = game;
+        this.alive = true;
+        this.size = 10;
+        this.triggerRange = 50;
+        this.explosionRange = 80;
+        this.hasExploded = false;
+        this.explosionTimer = 0;
+        this.explosionDuration = 300;
+    }
+
+    update(deltaTime) {
+        if (this.hasExploded) {
+            this.explosionTimer += deltaTime;
+            if (this.explosionTimer >= this.explosionDuration) {
+                this.alive = false;
+            }
+            return;
+        }
+
+        // Check if any enemy is in trigger range
+        this.game.enemies.forEach(enemy => {
+            if (!enemy || !enemy.alive) return;
+            if (this.hasExploded) return;
+
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < this.triggerRange) {
+                // Explode!
+                this.hasExploded = true;
+                this.game.soundSystem.playShoot('heavy');
+
+                // Damage all enemies in explosion range
+                this.game.enemies.forEach(e => {
+                    if (!e || !e.alive) return;
+                    const dx2 = e.x - this.x;
+                    const dy2 = e.y - this.y;
+                    const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+                    if (dist2 < this.explosionRange) {
+                        e.takeDamage(this.damage);
+                    }
+                });
+            }
+        });
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        if (this.hasExploded) {
+            // Draw explosion
+            const progress = this.explosionTimer / this.explosionDuration;
+            const currentRadius = this.explosionRange * progress;
+            const alpha = 1 - progress;
+
+            ctx.save();
+            ctx.fillStyle = `rgba(255, 170, 0, ${alpha * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, currentRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = `rgba(255, 100, 0, ${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+        } else {
+            // Draw mine
+            ctx.save();
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+}
+
+class HuntressAbility {
+    constructor(player, game) {
+        this.name = 'Huntress';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 4000;
+        this.timer = 0;
+        this.teleportDistance = 180;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Determine teleport direction
+            const keys = this.game.keys;
+            let dx = 0, dy = 0;
+
+            if (this.player.index === 0) {
+                if (keys['w']) dy -= 1;
+                if (keys['s']) dy += 1;
+                if (keys['a']) dx -= 1;
+                if (keys['d']) dx += 1;
+            } else {
+                if (keys['arrowup']) dy -= 1;
+                if (keys['arrowdown']) dy += 1;
+                if (keys['arrowleft']) dx -= 1;
+                if (keys['arrowright']) dx += 1;
+            }
+
+            if (dx === 0 && dy === 0) {
+                // Default to nearest enemy direction
+                let target = null;
+                let nearestDist = Infinity;
+
+                this.game.enemies.forEach(enemy => {
+                    if (!enemy || !enemy.alive) return;
+                    const edx = enemy.x - this.player.x;
+                    const edy = enemy.y - this.player.y;
+                    const dist = Math.sqrt(edx * edx + edy * edy);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        target = enemy;
+                    }
+                });
+
+                if (target) {
+                    dx = target.x - this.player.x;
+                    dy = target.y - this.player.y;
+                } else {
+                    dy = -1; // Default forward
+                }
+            }
+
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            this.player.x += (dx / dist) * this.teleportDistance;
+            this.player.y += (dy / dist) * this.teleportDistance;
+
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('normal');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#aa00ff';
+        ctx.fillText(`HUNTRESS: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class ArtificerAbility {
+    constructor(player, game) {
+        this.name = 'Artificer';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 5000;
+        this.timer = 0;
+        this.wallLength = 200;
+        this.wallDuration = 4000;
+        this.damage = 20;
+    }
+
+    apply() {}
+
+    use() {
+        if (this.timer <= 0) {
+            // Find nearest enemy for direction
+            let angle = 0;
+            let target = null;
+            let nearestDist = Infinity;
+
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            if (target) {
+                angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            }
+
+            const wall = new FlameWall(
+                this.player.x, this.player.y, angle, this.wallLength,
+                this.wallDuration, this.damage, this.game
+            );
+            this.game.entities.push(wall);
+            this.timer = this.cooldown;
+            this.game.soundSystem.playShoot('heavy');
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) this.timer -= deltaTime;
+    }
+
+    renderIndicator(ctx, x, y) {
+        const cooldownPercent = Math.max(0, this.timer / this.cooldown);
+        ctx.fillStyle = cooldownPercent > 0 ? '#ff0000' : '#ff4400';
+        ctx.fillText(`ARTIFICER: ${cooldownPercent > 0 ? (this.timer / 1000).toFixed(1) + 's' : 'READY'}`, x, y);
+    }
+
+    getUpgrades() {
+        return [];
+    }
+}
+
+class FlameWall {
+    constructor(x, y, angle, length, duration, damage, game) {
+        this.type = 'flameWall';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.length = length;
+        this.width = 30;
+        this.duration = duration;
+        this.damage = damage;
+        this.game = game;
+        this.alive = true;
+        this.timer = 0;
+        this.damageInterval = 300;
+        this.damageTimer = 0;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+            return;
+        }
+
+        // Damage enemies in wall periodically
+        this.damageTimer += deltaTime;
+        if (this.damageTimer >= this.damageInterval) {
+            this.game.enemies.forEach(enemy => {
+                if (!enemy || !enemy.alive) return;
+
+                // Check if enemy is in wall
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > this.length) return;
+
+                const enemyAngle = Math.atan2(dy, dx);
+                let angleDiff = Math.abs(enemyAngle - this.angle);
+                if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+                const maxAngleDiff = Math.atan(this.width / dist);
+
+                if (angleDiff < maxAngleDiff) {
+                    enemy.takeDamage(this.damage);
+                }
+            });
+            this.damageTimer = 0;
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        ctx.rotate(this.angle);
+
+        // Outer flames
+        ctx.fillStyle = `rgba(255, 68, 0, ${alpha * 0.4})`;
+        ctx.fillRect(0, -this.width, this.length, this.width * 2);
+
+        // Inner flames
+        ctx.fillStyle = `rgba(255, 150, 0, ${alpha * 0.7})`;
+        ctx.fillRect(0, -this.width / 2, this.length, this.width);
+
+        // Core
+        ctx.fillStyle = `rgba(255, 255, 0, ${alpha * 0.5})`;
+        ctx.fillRect(0, -this.width / 4, this.length, this.width / 2);
+
+        ctx.restore();
+    }
+}
+
+class Wall {
+    constructor(x, y, isHorizontal) {
+        this.x = x;
+        this.y = y;
+        this.isHorizontal = isHorizontal;
+        this.width = isHorizontal ? 150 : 30;
+        this.height = isHorizontal ? 30 : 150;
+    }
+
+    checkCollision(circleX, circleY, radius) {
+        // Check if circle collides with rectangle
+        const closestX = Math.max(this.x - this.width / 2, Math.min(circleX, this.x + this.width / 2));
+        const closestY = Math.max(this.y - this.height / 2, Math.min(circleY, this.y + this.height / 2));
+
+        const dx = circleX - closestX;
+        const dy = circleY - closestY;
+        const distSq = dx * dx + dy * dy;
+
+        return distSq < radius * radius;
+    }
+
+    getPushOut(circleX, circleY, radius) {
+        // Calculate how much to push the circle out of the wall
+        const closestX = Math.max(this.x - this.width / 2, Math.min(circleX, this.x + this.width / 2));
+        const closestY = Math.max(this.y - this.height / 2, Math.min(circleY, this.y + this.height / 2));
+
+        const dx = circleX - closestX;
+        const dy = circleY - closestY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist === 0) {
+            // Circle center is inside wall, push in direction of wall normal
+            if (this.isHorizontal) {
+                return { x: 0, y: circleY > this.y ? radius : -radius };
+            } else {
+                return { x: circleX > this.x ? radius : -radius, y: 0 };
+            }
+        }
+
+        const overlap = radius - dist;
+        if (overlap > 0) {
+            return {
+                x: (dx / dist) * overlap,
+                y: (dy / dist) * overlap
+            };
+        }
+
+        return { x: 0, y: 0 };
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        ctx.save();
+        ctx.fillStyle = '#555';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.fillRect(
+            screenX - this.width / 2,
+            screenY - this.height / 2,
+            this.width,
+            this.height
+        );
+        ctx.strokeRect(
+            screenX - this.width / 2,
+            screenY - this.height / 2,
+            this.width,
+            this.height
+        );
         ctx.restore();
     }
 }
