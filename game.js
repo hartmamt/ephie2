@@ -36,7 +36,7 @@ class Game {
 
         // Spawning
         this.spawnTimer = 0;
-        this.spawnInterval = 2000;
+        this.spawnInterval = 1000; // Spawn every 1 second (was 2)
         this.bossSpawnTimer = 0;
         this.bossSpawnInterval = 60000; // Boss every 60 seconds
 
@@ -213,6 +213,12 @@ class Game {
 
     start() {
         this.lastTime = performance.now();
+
+        // Spawn initial enemies so player has something to shoot immediately
+        for (let i = 0; i < 5; i++) {
+            this.spawnEnemy();
+        }
+
         this.gameLoop();
     }
 
@@ -309,9 +315,13 @@ class Game {
         // Spawn enemies
         this.spawnTimer += deltaTime;
         if (this.spawnTimer >= this.spawnInterval) {
-            this.spawnEnemy();
+            // Spawn 2-3 enemies at once early game
+            const spawnCount = this.worldLevel < 3 ? 2 : 1;
+            for (let i = 0; i < spawnCount; i++) {
+                this.spawnEnemy();
+            }
             this.spawnTimer = 0;
-            this.spawnInterval = Math.max(500, 2000 - (this.worldLevel * 50));
+            this.spawnInterval = Math.max(500, 1000 - (this.worldLevel * 30));
         }
 
         // Spawn boss
@@ -729,8 +739,8 @@ class Player {
         this.health = 100;
         this.speed = 200;
         this.damage = 10;
-        this.fireRate = 5; // shots per second (increased from 3)
-        this.range = 350; // increased range so enemies are easier to hit
+        this.fireRate = 8; // shots per second (increased from 5)
+        this.range = 500; // increased range significantly
         this.homingShots = false;
         this.poisonBullets = false;
 
@@ -804,7 +814,7 @@ class Player {
     fire() {
         // Find nearest enemy in range
         let target = null;
-        let nearestDist = this.range;
+        let nearestDist = Infinity; // Fixed: was this.range, which caused issues
 
         this.game.enemies.forEach(enemy => {
             const dx = enemy.x - this.x;
@@ -817,7 +827,8 @@ class Player {
             }
         });
 
-        if (target) {
+        // Only fire if target is within range
+        if (target && nearestDist <= this.range) {
             const angle = Math.atan2(target.y - this.y, target.x - this.x);
             const projectile = new Projectile(
                 this.x, this.y, angle, this.damage, true, this.game,
@@ -862,12 +873,40 @@ class Player {
         ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw range circle (faint)
-        ctx.strokeStyle = this.color + '20';
-        ctx.lineWidth = 1;
+        // Draw range circle (more visible)
+        ctx.strokeStyle = this.color + '40';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.range, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Draw crosshair to nearest enemy
+        let nearestEnemy = null;
+        let nearestDist = Infinity;
+        game.enemies.forEach(enemy => {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < nearestDist && dist <= this.range) {
+                nearestDist = dist;
+                nearestEnemy = enemy;
+            }
+        });
+
+        if (nearestEnemy) {
+            const targetScreenX = game.toScreenX(nearestEnemy.x);
+            const targetScreenY = game.toScreenY(nearestEnemy.y);
+
+            // Draw line to target
+            ctx.strokeStyle = this.color + '60';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(screenX, screenY);
+            ctx.lineTo(targetScreenX, targetScreenY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
 
         // Draw ability indicator
         if (this.ability) {
@@ -1100,8 +1139,8 @@ class Projectile {
         this.poison = poison;
         this.target = target;
 
-        this.speed = 400;
-        this.radius = 4;
+        this.speed = 500; // Faster projectiles
+        this.radius = 5; // Bigger and more visible
         this.color = friendly ? '#ffff00' : '#ff0000';
         this.alive = true;
         this.piercing = false;
