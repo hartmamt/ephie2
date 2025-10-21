@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v2.0.3
-// Major Update: Weapon System + Sound Effects!
+// Arena Shooter Game - Armory v2.1.3
+// Update: New Explosive Ability + Better Controls!
 
 class Game {
     constructor() {
@@ -82,20 +82,13 @@ class Game {
                 this.players[1].cycleWeapon();
             }
 
-            // Special abilities - E for P1
-            if (e.key.toLowerCase() === 'e' && this.players[0]) {
+            // Special abilities - SPACE for P1, SHIFT for P2
+            if (e.key === ' ' && this.players[0] && !e.repeat) {
+                e.preventDefault(); // Prevent page scroll
                 this.players[0].useAbility();
             }
-            if (e.key === ' ' && this.players[0] && this.players[0].ability?.name === 'Dash') {
-                this.players[0].useAbility();
-            }
-            if (this.players[1]) {
-                if (e.key === 'Enter' && this.players[1].ability?.name === 'Dash') {
-                    this.players[1].useAbility();
-                }
-                if (e.key === 'Shift' && this.players[1]) {
-                    this.players[1].useAbility();
-                }
+            if (e.key === 'Shift' && this.players[1] && !e.repeat) {
+                this.players[1].useAbility();
             }
         });
 
@@ -172,12 +165,12 @@ class Game {
         const abilities = [
             {
                 name: 'Dash',
-                description: 'Quick speed burst on cooldown. Press SPACE (P1) or ENTER (P2) to dash.',
+                description: 'Quick speed burst on cooldown. Press SPACE (P1) or SHIFT (P2) to dash.',
                 effect: () => new DashAbility(player)
             },
             {
                 name: 'Turret',
-                description: 'Deploy a turret for 7 seconds. Fires at 150% of your stats.',
+                description: 'Deploy a turret for 7 seconds. Fires at 150% of your stats. Press SPACE/SHIFT.',
                 effect: () => new TurretAbility(player, this)
             },
             {
@@ -191,6 +184,11 @@ class Game {
                 effect: () => new PhaseShieldAbility(player)
             },
             {
+                name: 'Explosive',
+                description: 'Fires 3 large orange explosive balls in a spread. Massive AOE damage! Press SPACE/SHIFT.',
+                effect: () => new ExplosiveAbility(player, this)
+            },
+            {
                 name: 'Large',
                 description: '50% larger size, 75% more damage, 75% more health, 25% more range, -50% speed.',
                 effect: () => new LargeAbility(player)
@@ -202,7 +200,7 @@ class Game {
             },
             {
                 name: 'Laser Blade',
-                description: 'Press Q to create a high-damage ring for 1.5 seconds.',
+                description: 'Press SPACE/SHIFT to create a high-damage ring for 1.5 seconds.',
                 effect: () => new LaserBladeAbility(player, this)
             }
         ];
@@ -801,7 +799,7 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v2.0.3', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v2.1.3', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
@@ -1878,6 +1876,261 @@ class LaserBlade {
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
         ctx.stroke();
+    }
+}
+
+class ExplosiveAbility {
+    constructor(player, game) {
+        this.name = 'Explosive';
+        this.player = player;
+        this.game = game;
+        this.cooldown = 5000; // 5 second cooldown
+        this.timer = 0;
+        this.damage = 80; // High damage per explosion
+        this.explosionRadius = 100; // Large explosion radius
+    }
+
+    apply() {
+        // Passive ability, no initial effect
+    }
+
+    use() {
+        if (this.timer <= 0) {
+            // Fire 3 explosive balls in a spread
+            const spreadAngles = [-0.3, 0, 0.3]; // Spread in radians (~17 degrees apart)
+
+            // Find nearest enemy to aim at
+            let target = null;
+            let nearestDist = Infinity;
+            this.game.enemies.forEach(enemy => {
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            // Determine base angle
+            let baseAngle = 0;
+            if (target) {
+                baseAngle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+            } else {
+                // Fire towards mouse or forward
+                baseAngle = 0;
+            }
+
+            // Create 3 explosive balls
+            spreadAngles.forEach(angleOffset => {
+                const angle = baseAngle + angleOffset;
+                const ball = new ExplosiveBall(
+                    this.player.x,
+                    this.player.y,
+                    angle,
+                    this.damage,
+                    this.explosionRadius,
+                    this.game
+                );
+                this.game.entities.push(ball);
+            });
+
+            // Play a loud explosion sound
+            this.game.soundSystem.playShoot('heavy');
+
+            this.timer = this.cooldown;
+        }
+    }
+
+    update(deltaTime) {
+        if (this.timer > 0) {
+            this.timer -= deltaTime;
+        }
+    }
+
+    renderIndicator(ctx, x, y) {
+        const ready = this.timer <= 0;
+        ctx.strokeStyle = ready ? '#ff8800' : '#ff0000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, this.player.size + 12, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (!ready) {
+            const percent = 1 - (this.timer / this.cooldown);
+            ctx.strokeStyle = '#ff8800';
+            ctx.beginPath();
+            ctx.arc(x, y, this.player.size + 12, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * percent);
+            ctx.stroke();
+        }
+    }
+
+    getUpgrades() {
+        return [
+            {
+                type: 'abilityUpgrade',
+                name: 'Explosive: +50% Damage',
+                description: 'Increases explosion damage by 50%',
+                apply: (ability) => {
+                    ability.damage *= 1.5;
+                }
+            },
+            {
+                type: 'abilityUpgrade',
+                name: 'Explosive: +Radius',
+                description: 'Increases explosion radius by 30%',
+                apply: (ability) => {
+                    ability.explosionRadius *= 1.3;
+                }
+            }
+        ];
+    }
+}
+
+class ExplosiveBall {
+    constructor(x, y, angle, damage, explosionRadius, game) {
+        this.type = 'explosiveBall';
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.damage = damage;
+        this.explosionRadius = explosionRadius;
+        this.game = game;
+        this.alive = true;
+        this.radius = 15; // Large orange ball
+        this.speed = 250;
+        this.lifetime = 2000; // Explode after 2 seconds if nothing hit
+        this.timer = 0;
+        this.hasExploded = false;
+    }
+
+    update(deltaTime) {
+        const dt = deltaTime / 1000;
+
+        // Move forward
+        this.x += Math.cos(this.angle) * this.speed * dt;
+        this.y += Math.sin(this.angle) * this.speed * dt;
+
+        this.timer += deltaTime;
+
+        // Check collision with enemies
+        this.game.enemies.forEach(enemy => {
+            if (this.alive && !this.hasExploded) {
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < this.radius + enemy.size) {
+                    this.explode();
+                }
+            }
+        });
+
+        // Explode after lifetime
+        if (this.timer >= this.lifetime && !this.hasExploded) {
+            this.explode();
+        }
+    }
+
+    explode() {
+        this.hasExploded = true;
+        this.alive = false;
+
+        // Create explosion effect
+        const explosion = new Explosion(this.x, this.y, this.explosionRadius, this.damage, this.game);
+        this.game.entities.push(explosion);
+
+        // Damage all enemies in radius
+        this.game.enemies.forEach(enemy => {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < this.explosionRadius) {
+                enemy.takeDamage(this.damage);
+            }
+        });
+
+        // Play explosion sound
+        this.game.soundSystem.playEnemyDeath(); // Reuse this for explosion
+    }
+
+    render(ctx, game) {
+        if (this.hasExploded) return;
+
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        // Draw large orange ball
+        ctx.fillStyle = '#ff8800';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glow effect
+        ctx.strokeStyle = '#ffaa00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius + 3, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner highlight
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.arc(screenX - 3, screenY - 3, this.radius / 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+class Explosion {
+    constructor(x, y, radius, damage, game) {
+        this.type = 'explosion';
+        this.x = x;
+        this.y = y;
+        this.maxRadius = radius;
+        this.damage = damage;
+        this.game = game;
+        this.alive = true;
+        this.radius = 10;
+        this.duration = 300; // 0.3 second explosion animation
+        this.timer = 0;
+    }
+
+    update(deltaTime) {
+        this.timer += deltaTime;
+
+        // Expand explosion
+        this.radius = (this.timer / this.duration) * this.maxRadius;
+
+        if (this.timer >= this.duration) {
+            this.alive = false;
+        }
+    }
+
+    render(ctx, game) {
+        const screenX = game.toScreenX(this.x);
+        const screenY = game.toScreenY(this.y);
+
+        const alpha = 1 - (this.timer / this.duration);
+
+        // Outer ring
+        ctx.strokeStyle = `rgba(255, 136, 0, ${alpha})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner fill
+        ctx.fillStyle = `rgba(255, 200, 0, ${alpha * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright center
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
