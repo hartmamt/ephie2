@@ -1,5 +1,5 @@
-// Arena Shooter Game - Armory v2.1.5
-// New Features: Sound toggle + Custom background image upload
+// Arena Shooter Game - Armory v2.1.6
+// New Feature: Player color customization
 
 class Game {
     constructor() {
@@ -52,6 +52,9 @@ class Game {
         // Custom background
         this.backgroundImage = null;
         this.backgroundPattern = null;
+
+        // Player customization
+        this.playerColor = '#00ffff'; // Default cyan
 
         // Input
         this.keys = {};
@@ -109,6 +112,31 @@ class Game {
             this.soundSystem.setEnabled(e.target.checked);
         });
 
+        // Player color picker
+        const colorPicker = document.getElementById('player-color');
+        const colorInput = document.getElementById('color-input');
+
+        colorPicker.addEventListener('input', (e) => {
+            this.playerColor = e.target.value;
+            colorInput.value = e.target.value;
+        });
+
+        colorInput.addEventListener('input', (e) => {
+            let value = e.target.value.trim();
+
+            // Add # if missing
+            if (value && !value.startsWith('#')) {
+                value = '#' + value;
+                e.target.value = value;
+            }
+
+            // Validate hex color (3 or 6 digits)
+            if (/^#[0-9A-Fa-f]{6}$/.test(value) || /^#[0-9A-Fa-f]{3}$/.test(value)) {
+                this.playerColor = value;
+                colorPicker.value = value;
+            }
+        });
+
         // Background image upload
         const bgUpload = document.getElementById('bg-upload');
         bgUpload.addEventListener('change', (e) => {
@@ -150,7 +178,7 @@ class Game {
         document.getElementById('multiplayer-setup').classList.add('hidden');
 
         // Create both players first
-        const p1 = new Player(this.canvas.width / 2 - 50, this.canvas.height / 2, 0, this);
+        const p1 = new Player(this.canvas.width / 2 - 50, this.canvas.height / 2, 0, this, this.playerColor);
         const p2 = new Player(this.canvas.width / 2 + 50, this.canvas.height / 2, 1, this);
         this.players[0] = p1;
         this.players[1] = p2;
@@ -184,7 +212,8 @@ class Game {
     initPlayer(index) {
         const x = this.canvas.width / 2 + (index === 0 ? -50 : 50);
         const y = this.canvas.height / 2;
-        const player = new Player(x, y, index, this);
+        const color = index === 0 ? this.playerColor : null;
+        const player = new Player(x, y, index, this, color);
         this.players[index] = player;
         this.showAbilitySelection(index);
     }
@@ -862,19 +891,20 @@ class Game {
         // Version display
         this.ctx.fillStyle = '#00000040';
         this.ctx.font = '12px Arial';
-        this.ctx.fillText('Armory v2.1.5', this.canvas.width - 100, this.canvas.height - 10);
+        this.ctx.fillText('Armory v2.1.6', this.canvas.width - 100, this.canvas.height - 10);
     }
 }
 
 // Player Class
 class Player {
-    constructor(x, y, index, game) {
+    constructor(x, y, index, game, customColor = null) {
         this.x = x;
         this.y = y;
         this.index = index;
         this.game = game;
         this.size = 10;
-        this.color = index === 0 ? '#00ffff' : '#ff8800';
+        // Use custom color for P1, default orange for P2
+        this.color = index === 0 ? (customColor || '#00ffff') : '#ff8800';
 
         // Stats
         this.maxHealth = 150; // Increased from 100

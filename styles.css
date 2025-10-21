@@ -176,6 +176,27 @@ input[type="checkbox"] {
     accent-color: #00ffff;
 }
 
+input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border: 2px solid #555;
+    border-radius: 5px;
+    cursor: pointer;
+    background: #2a2a2a;
+}
+
+input[type="text"]#color-input {
+    width: 100px;
+    background: #2a2a2a;
+    color: #00ffff;
+    border: 2px solid #555;
+    padding: 8px;
+    font-size: 14px;
+    border-radius: 5px;
+    text-align: center;
+    font-family: monospace;
+}
+
 input[type="file"] {
     background: #2a2a2a;
     color: #fff;

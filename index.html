@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arena Shooter - Armory v2.1.5</title>
+    <title>Arena Shooter - Armory v2.1.6</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -40,7 +40,7 @@
         <div id="multiplayer-setup" class="modal hidden">
             <div class="modal-content">
                 <h2>Arena Shooter</h2>
-                <p class="version-number">Armory v2.1.5</p>
+                <p class="version-number">Armory v2.1.6</p>
 
                 <!-- Settings Section -->
                 <div class="settings-section">
@@ -49,6 +49,11 @@
                             <input type="checkbox" id="sound-toggle" checked>
                             Enable Sound Effects
                         </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="player-color">Player Color:</label>
+                        <input type="color" id="player-color" value="#00ffff">
+                        <input type="text" id="color-input" value="#00ffff" placeholder="#00ffff" maxlength="7">
                     </div>
                     <div class="setting-item">
                         <label for="bg-upload">Custom Background Image:</label>
