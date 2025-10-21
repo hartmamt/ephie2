@@ -2,10 +2,32 @@
 
 A top-down arena shooter built with HTML5 Canvas and JavaScript. Survive waves of enemies, collect XP, level up, and choose powerful upgrades!
 
+## 🎮 Quick Start - Play Now!
+
+### Option 1: Direct File Open (Easiest)
+1. Navigate to the project folder
+2. **Double-click `index.html`** - it will open in your default browser
+3. Start playing!
+
+### Option 2: From File Explorer
+- **Windows**: Right-click `index.html` → Open with → Chrome/Firefox/Edge
+- **Mac**: Right-click `index.html` → Open With → Chrome/Firefox/Safari
+- **Linux**: Right-click `index.html` → Open With → Browser
+
+### Option 3: Using a Local Server (Optional)
+If the game doesn't work with direct file opening, you can run a simple server:
+
+```bash
+# If you have Python 3 installed:
+python -m http.server 8000
+
+# Then open in browser:
+# http://localhost:8000
+```
+
 ## How to Play
 
-1. Open `index.html` in a web browser
-2. Choose your game mode:
+1. Choose your game mode:
    - **Single Player** - Play alone
    - **Local Multiplayer** - Play with a friend on the same computer
    - **Network Multiplayer** - (Basic implementation) Host or join games across computers

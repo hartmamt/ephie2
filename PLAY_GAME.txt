@@ -1,0 +1,42 @@
+================================
+   HOW TO PLAY THE GAME
+================================
+
+EASIEST WAY:
+------------
+Find the file called "index.html" in this folder and DOUBLE-CLICK it.
+It will open in your web browser and you can start playing!
+
+
+FILE LOCATION:
+--------------
+/home/user/ephie2/index.html
+
+
+STEP BY STEP:
+-------------
+1. Find "index.html" in this folder
+2. Double-click it (or right-click → Open With → Your Browser)
+3. Choose Single Player or Local Multiplayer
+4. Pick a starting ability
+5. Use WASD to move, auto-fires at enemies!
+
+
+IF IT DOESN'T WORK:
+-------------------
+Open a terminal in this folder and run:
+    python -m http.server 8000
+
+Then open your browser and go to:
+    http://localhost:8000
+
+
+CONTROLS:
+---------
+Player 1: WASD to move (auto-fires at enemies)
+Player 2: Arrow Keys to move (auto-fires at enemies)
+
+Special abilities use Q (P1) or SHIFT (P2) depending on ability chosen
+
+
+HAVE FUN!
